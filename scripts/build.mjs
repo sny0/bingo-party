@@ -15,7 +15,7 @@ for (const file of files) {
   hash.update(await readFile(target));
 }
 const revision = hash.digest('hex').slice(0, 12);
-const worker = (await readFile(resolve(root, 'sw.js'), 'utf8')).replace('garagara-bingo-v1.1.0', 'garagara-bingo-' + revision);
+const worker = (await readFile(resolve(root, 'sw.js'), 'utf8')).replace('garagara-bingo-v1.1.1', 'garagara-bingo-' + revision);
 await writeFile(resolve(output, 'sw.js'), worker);
 await writeFile(resolve(output, '.nojekyll'), '');
 const html = await readFile(resolve(output, 'index.html'), 'utf8');

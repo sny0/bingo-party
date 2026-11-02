@@ -118,7 +118,7 @@ test('charge, launch and finale keep one saved draw and block repeated clicks', 
   assert.equal(app.elements.get('ball-number').textContent, '?', 'sound toggle must not expose the pending result');
   await app.tick(1600);
   assert.equal(app.stage.classList.contains('is-launching'), true);
-  assert.equal(app.elements.get('fx-caption').textContent, '運命の一球！');
+  assert.equal(app.elements.get('fx-caption').textContent, '出た！');
   await app.tick(300);
   assert.equal(app.stage.classList.contains('is-finale'), true);
   assert.equal(Number(app.elements.get('fx-number').textContent), app.snapshot().drawn[0]);

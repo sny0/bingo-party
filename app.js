@@ -27,7 +27,7 @@ function updateSaveStatus() {
   ui.save_status.replaceChildren();
   const dot = document.createElement('i');
   dot.className = 'save-dot';
-  ui.save_status.append(dot, document.createTextNode(persistent ? 'この端末に自動保存' : '保存できません · 履歴を保存してください'));
+  ui.save_status.append(dot, document.createTextNode(persistent ? 'このブラウザに自動保存' : '自動保存できません'));
 }
 
 function readSaved() {
@@ -87,15 +87,15 @@ function render() {
   ui.remaining_count.textContent = TOTAL - game.drawn.length;
   ui.ball_number.textContent = latest ?? '?';
   ui.ball_letter.textContent = bingoLetter(latest);
-  ui.result_kicker.textContent = complete ? 'THANK YOU FOR PLAYING' : 'YOUR LUCKY NUMBER';
-  ui.draw_status.textContent = complete ? 'すべての番号が出ました。いい夜を！' : latest ? '第' + game.drawn.length + '球 · ' + bingoLetter(latest) + ' の ' + latest + ' 番！' : '最初のラッキーナンバーは？';
-  ui.stage_label.textContent = complete ? 'WHAT A NIGHT!' : 'READY TO ROLL';
-  ui.draw_button_text.textContent = complete ? 'すべての抽選が終了しました' : latest ? '次のナンバーを引く' : 'ガラガラを回す';
+  ui.result_kicker.textContent = complete ? '抽選終了' : '今回の番号';
+  ui.draw_status.textContent = complete ? '75個すべての番号が出ました。' : latest ? '第' + game.drawn.length + '球 · ' + bingoLetter(latest) + 'の' + latest + '番' : 'ボタンを押して抽選を始めてください。';
+  ui.stage_label.textContent = complete ? '抽選終了' : '抽選できます';
+  ui.draw_button_text.textContent = complete ? '抽選は終了しました' : latest ? '次の番号を引く' : 'ガラガラを回す';
   stage.classList.toggle('all-done', complete);
   ui.draw_button.disabled = busy || complete;
   ui.settings_button.disabled = busy;
   ui.export_button.disabled = busy || !game.drawn.length;
-  ui.result_ball.setAttribute('aria-label', latest ? '最新の抽選結果 ' + bingoLetter(latest) + ' の ' + latest + ' 番' : '未抽選');
+  ui.result_ball.setAttribute('aria-label', latest ? '最新の抽選結果 ' + bingoLetter(latest) + 'の' + latest + '番' : '未抽選');
   for (let number = 1; number <= TOTAL; number++) {
     const cell = $('number-' + number);
     cell.classList.toggle('is-drawn', drawn.has(number));
@@ -267,8 +267,8 @@ function startMachine(duration, number) {
   const launchAt = duration * 0.7;
   ui.exit_number.textContent = number;
   ui.exit_ball.setAttribute('opacity', '0');
-  ui.fx_kicker.textContent = 'LET THE LUCK BEGIN';
-  ui.fx_caption.textContent = '運命を回せ！';
+  ui.fx_kicker.textContent = '';
+  ui.fx_caption.textContent = '抽選開始';
   stage.style.setProperty('--charge-duration', launchAt + 'ms');
   stage.classList.add('is-drawing');
   if (!reduceMotion.matches) {
@@ -302,10 +302,10 @@ function startMachine(duration, number) {
 
 function launchEffects() {
   stage.classList.add('is-launching');
-  ui.fx_kicker.textContent = 'HERE COMES YOUR LUCK';
-  ui.fx_caption.textContent = '運命の一球！';
-  ui.stage_label.textContent = 'LUCK UNLEASHED';
-  ui.draw_status.textContent = 'さあ、ナンバー発表！';
+  ui.fx_kicker.textContent = '';
+  ui.fx_caption.textContent = '出た！';
+  ui.stage_label.textContent = '番号が出ます';
+  ui.draw_status.textContent = '番号が出ます。';
   launchSound();
 }
 
@@ -334,11 +334,11 @@ function revealEffects(number) {
   render();
   ui.fx_number.textContent = number;
   ui.fx_letter.textContent = bingoLetter(number);
-  ui.fx_round.textContent = '第 ' + game.drawn.length + ' 球 · 今夜のラッキーナンバー';
+  ui.fx_round.textContent = '第' + game.drawn.length + '球';
   stage.classList.add('is-revealing');
   if (!reduceMotion.matches) {
     stage.classList.add('is-finale');
-    ui.draw_button_text.textContent = 'ナンバー発表！';
+    ui.draw_button_text.textContent = '番号を表示しています';
   }
   chime();
   confetti();
@@ -363,11 +363,11 @@ async function runDraw() {
   ui.draw_button.disabled = true;
   ui.settings_button.disabled = true;
   ui.export_button.disabled = true;
-  ui.draw_button_text.textContent = '運命のナンバー、抽選中！';
-  ui.draw_status.textContent = '光をためて…どの番号が出るかな？';
+  ui.draw_button_text.textContent = '抽選中…';
+  ui.draw_status.textContent = '抽選機を回しています。';
   ui.result_ball.setAttribute('aria-label', '抽選中');
   ui.ball_number.textContent = previous ?? '?';
-  ui.stage_label.textContent = 'LUCK CHARGING';
+  ui.stage_label.textContent = '抽選中';
   const duration = reduceMotion.matches ? 350 : game.settings.duration;
   try {
     startMachine(duration, number);
@@ -402,7 +402,7 @@ async function draw() {
     busy = false;
     clearShowEffects();
     render();
-    notify('抽選を開始できませんでした。ページを再読み込みしてください。');
+    notify('抽選中にエラーが起きました。ページを再読み込みしてください。');
   }
 }
 
@@ -416,7 +416,7 @@ function openSettings() {
   ui.settings_dialog.showModal();
 }
 
-function askConfirmation({ title, description, button, kicker = 'A FRESH START', action }) {
+function askConfirmation({ title, description, button, kicker = '抽選のやり直し', action }) {
   confirmationAction = action;
   ui.confirm_heading.textContent = title;
   ui.confirm_description.textContent = description;
@@ -442,7 +442,7 @@ ui.settings_form.addEventListener('submit', event => {
   syncAudio();
   render();
   ui.settings_dialog.close();
-  notify('パーティーの設定を保存しました。');
+  notify('設定を保存しました。');
 });
 ui.volume_input.addEventListener('input', () => { ui.volume_output.value = ui.volume_input.value + '%'; });
 ui.sound_button.addEventListener('click', () => {
@@ -476,7 +476,7 @@ ui.export_button.addEventListener('click', () => {
   anchor.click();
   anchor.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
-  notify('履歴ファイルを保存します。別の端末でも読み込めます。');
+  notify('履歴ファイルを保存します。');
 });
 ui.import_button.addEventListener('click', () => ui.import_input.click());
 ui.import_input.addEventListener('change', async () => {
@@ -489,22 +489,22 @@ ui.import_input.addEventListener('change', async () => {
     ui.settings_dialog.close();
     askConfirmation({
       title: '履歴を読み込みますか？',
-      description: '現在の結果を、ファイルの' + imported.drawn.length + '球分の履歴に置き換えます。',
+      description: 'このブラウザの履歴を、ファイルに保存された' + imported.drawn.length + '球分の履歴に置き換えます。',
       button: '履歴を読み込む',
-      kicker: 'PICK UP WHERE YOU LEFT OFF',
-      action: () => { game = imported; persist(); syncAudio(); render(); ui.exit_ball.setAttribute('opacity', '0'); notify('履歴を読み込みました。続きから抽選できます。'); },
+      kicker: '履歴の読み込み',
+      action: () => { game = imported; persist(); syncAudio(); render(); ui.exit_ball.setAttribute('opacity', '0'); notify('履歴を読み込みました。'); },
     });
   } catch (error) {
-    ui.settings_message.textContent = error instanceof SyntaxError ? 'ファイルを読み取れません。正しいJSON形式の履歴を選んでください。' : error.message;
+    ui.settings_message.textContent = error instanceof SyntaxError ? 'ファイルを読み取れません。「履歴を保存」でダウンロードしたファイルを選んでください。' : error.message;
   }
 });
 ui.reset_button.addEventListener('click', () => {
   ui.settings_dialog.close();
   askConfirmation({
     title: '新しいゲームを始めますか？',
-    description: '現在の抽選結果を消して、1〜75のすべての番号でやり直します。必要なら先に履歴を保存してください。',
+    description: '現在の履歴を消して、最初から引き直します。残しておきたい履歴は、先にファイルへ保存してください。',
     button: '新しく始める',
-    action: () => { game = newGame(game.settings); persist(); render(); stage.classList.remove('is-revealing'); ui.exit_ball.setAttribute('opacity', '0'); ui.confetti_container.replaceChildren(); notify('新しいゲームを始めました。幸運を！'); },
+    action: () => { game = newGame(game.settings); persist(); render(); stage.classList.remove('is-revealing'); ui.exit_ball.setAttribute('opacity', '0'); ui.confetti_container.replaceChildren(); notify('履歴を消して、新しいゲームを始めました。'); },
   });
 });
 ui.confirm_cancel.addEventListener('click', () => { confirmationAction = null; ui.confirm_dialog.close(); });
@@ -526,7 +526,7 @@ createBoard();
 createShowEffects();
 render();
 $('edition-year').textContent = new Date().getFullYear();
-if (storageWarning) notify('保存されていた履歴を読み込めませんでした。履歴ファイルがあれば設定から読み込めます。');
+if (storageWarning) notify('このブラウザの履歴を復元できませんでした。保存済みの履歴ファイルは、設定画面から読み込めます。');
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }

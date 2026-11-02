@@ -4,19 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#a72e30">
-  <meta name="description" content="ガラガラ回して、今夜のラッキーナンバーを。忘年会のためのビンゴ抽選機。">
+  <meta name="description" content="1〜75の番号を重複なしで引けるビンゴ抽選機。抽選履歴を保存して、途中から再開できます。">
   <title>ガラガラ BINGO NIGHT</title>
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=1.1.0">
-  <script type="module" src="./app.js?v=1.1.0"></script>
+  <link rel="stylesheet" href="./styles.css?v=1.1.1">
+  <script type="module" src="./app.js?v=1.1.1"></script>
 </head>
 <body>
   <div class="page-shell">
     <header class="header">
       <a class="brand" href="./" aria-label="BINGO NIGHT ホーム">
         <span class="brand-symbol" aria-hidden="true">✳</span>
-        <span>BINGO NIGHT<small>GOOD COMPANY. GOOD LUCK.</small></span>
+        <span>BINGO NIGHT<small>ガラガラ抽選機</small></span>
       </a>
       <div class="header-tools">
         <button class="icon-button" id="sound-button" type="button" aria-label="効果音をオフにする" aria-pressed="true" title="効果音">
@@ -34,11 +34,11 @@
     <main>
       <section class="intro" aria-labelledby="main-heading">
         <div>
-          <p class="eyebrow"><span class="tiny-star">✦</span> YEAR-END PARTY EDITION <span id="edition-year">2026</span></p>
-          <h1 id="main-heading">今夜の運を、<span>回そう。</span></h1>
+          <p class="eyebrow"><span class="tiny-star">✦</span> 忘年会 · <span id="edition-year">2026</span></p>
+          <h1 id="main-heading">ビンゴ<span>抽選機</span></h1>
           <p class="intro-copy" id="event-title">忘年会ビンゴ</p>
         </div>
-        <div class="intro-note"><span class="note-star" aria-hidden="true">✧</span><p>A little luck,<br>a lot of cheers.</p></div>
+        <div class="intro-note" aria-hidden="true"><span class="note-star">✧</span></div>
       </section>
 
       <section class="draw-stage" aria-label="ビンゴ抽選機">
@@ -52,17 +52,17 @@
           <div class="fx-sparks" id="fx-sparks"></div>
           <div class="fx-flash"></div>
           <div class="fx-shockwave"></div>
-          <div class="fx-caption"><span id="fx-kicker">LET THE LUCK BEGIN</span><strong id="fx-caption">運命を回せ！</strong></div>
+          <div class="fx-caption"><span id="fx-kicker"></span><strong id="fx-caption">抽選開始</strong></div>
           <div class="fx-reveal">
-            <span class="fx-reveal-top">✦ LUCKY NUMBER ✦</span>
+            <span class="fx-reveal-top">✦ 抽選結果 ✦</span>
             <div class="fx-reveal-medallion"><span id="fx-letter">B</span><strong id="fx-number">?</strong></div>
-            <span class="fx-reveal-bottom" id="fx-round">今夜のラッキーナンバー</span>
+            <span class="fx-reveal-bottom" id="fx-round">今回の番号</span>
           </div>
-          <div class="fx-meter"><span></span><b>LUCK CHARGING</b></div>
+          <div class="fx-meter"><span></span><b>抽選中</b></div>
           <div class="fx-rim"></div>
           <div class="fx-lights" id="fx-lights"></div>
         </div>
-        <div class="stage-topline"><span><i class="live-dot"></i> <span id="stage-label">READY TO ROLL</span></span><span>01 — 75</span></div>
+        <div class="stage-topline"><span><i class="live-dot"></i> <span id="stage-label">抽選できます</span></span><span>01 — 75</span></div>
         <div class="stage-layout">
           <div class="machine-scene" id="machine-scene">
             <span class="scene-star star-one" aria-hidden="true">✧</span>
@@ -139,21 +139,21 @@
               <rect x="209" y="377" width="81" height="19" rx="3" fill="#e2bc77" stroke="#8b602c"/>
               <text x="249.5" y="390" text-anchor="middle" font-size="9" font-family="Georgia, serif" fill="#7b492b" letter-spacing="2">GOOD LUCK</text>
             </svg>
-            <p class="machine-caption"><span aria-hidden="true">↻</span> ひと回しに、わくわくを。</p>
+            <p class="machine-caption"><span aria-hidden="true">↻</span> 一度出た番号は、次の抽選から外れます。</p>
           </div>
 
           <div class="result-panel">
-            <p class="result-kicker" id="result-kicker">YOUR LUCKY NUMBER</p>
+            <p class="result-kicker" id="result-kicker">今回の番号</p>
             <div class="number-orbit" id="number-orbit">
               <span class="orbit-star orbit-star-one" aria-hidden="true">✦</span>
               <span class="orbit-star orbit-star-two" aria-hidden="true">✧</span>
               <div class="result-ball" id="result-ball">
                 <span class="ball-letter" id="ball-letter">BINGO</span>
                 <span class="ball-number" id="ball-number">?</span>
-                <span class="ball-bottom" aria-hidden="true">GOOD LUCK</span>
+                <span class="ball-bottom" aria-hidden="true">BINGO NIGHT</span>
               </div>
             </div>
-            <p class="draw-status" id="draw-status" role="status" aria-live="polite" aria-atomic="true">最初のラッキーナンバーは？</p>
+            <p class="draw-status" id="draw-status" role="status" aria-live="polite" aria-atomic="true">ボタンを押して抽選を始めてください。</p>
             <button class="draw-button" id="draw-button" type="button"><span class="draw-button-icon" aria-hidden="true">↻</span><span id="draw-button-text">ガラガラを回す</span><span class="button-arrow" aria-hidden="true">→</span></button>
             <p class="keyboard-hint"><kbd>SPACE</kbd> キーでも抽選できます</p>
             <div class="draw-counter"><span>抽選済み <strong id="drawn-count">0</strong><small> / 75</small></span><span class="counter-divider"></span><span>残り <strong id="remaining-count">75</strong><small> 個</small></span></div>
@@ -163,25 +163,25 @@
       </section>
 
       <section class="history-section" aria-labelledby="history-heading">
-        <div class="section-heading"><div><span class="eyebrow small">THE LUCKY LINEUP</span><h2 id="history-heading">これまでのナンバー</h2></div><span class="save-status" id="save-status"><i class="save-dot"></i> この端末に自動保存</span></div>
+        <div class="section-heading"><div><h2 id="history-heading">これまでの番号</h2></div><span class="save-status" id="save-status"><i class="save-dot"></i> このブラウザに自動保存</span></div>
         <div class="recent-line"><span class="recent-label">直近の抽選</span><ol id="recent-numbers" aria-label="直近の抽選結果"><li class="recent-empty">まだ抽選されていません</li></ol></div>
         <div class="number-board" id="number-board" aria-label="1から75の抽選済み番号一覧"></div>
         <div class="board-legend"><span><i class="legend-dot drawn-dot"></i> 抽選済み</span><span><i class="legend-dot latest-dot"></i> 直前の番号</span><button class="text-button" id="export-button" type="button">履歴を保存 <span aria-hidden="true">↗</span></button></div>
       </section>
     </main>
-    <footer class="footer"><span>LET THE GOOD TIMES ROLL.</span><span>みんなに、いい夜といい運を。 <span class="footer-star" aria-hidden="true">✳</span></span></footer>
+    <footer class="footer"><span>BINGO NIGHT</span><span class="footer-star" aria-hidden="true">✳</span></footer>
   </div>
 
   <dialog class="settings-dialog" id="settings-dialog" aria-labelledby="settings-heading">
-    <div class="dialog-heading"><div><p class="eyebrow small">MAKE IT YOUR NIGHT</p><h2 id="settings-heading">パーティーの設定</h2></div><button class="icon-button close-dialog" type="button" aria-label="設定を閉じる">×</button></div>
+    <div class="dialog-heading"><div><h2 id="settings-heading">設定</h2></div><button class="icon-button close-dialog" type="button" aria-label="設定を閉じる">×</button></div>
     <form id="settings-form">
       <label class="field-label" for="title-input">イベント名</label>
       <input id="title-input" name="title" type="text" maxlength="36" autocomplete="off" placeholder="忘年会ビンゴ">
       <label class="field-label" for="duration-input">抽選の長さ</label>
-      <select id="duration-input" name="duration"><option value="1800">さくっと · 約3秒</option><option value="3400">わくわく · 約5秒</option><option value="5200">じっくり · 約6秒</option></select>
+      <select id="duration-input" name="duration"><option value="1800">短め · 約3秒</option><option value="3400">標準 · 約5秒</option><option value="5200">長め · 約6秒</option></select>
       <label class="field-label volume-label" for="volume-input">効果音の音量 <output id="volume-output" for="volume-input">40%</output></label>
       <input id="volume-input" name="volume" type="range" min="0" max="100" step="5" value="40">
-      <p class="settings-note">抽選結果はこのブラウザに保存されます。別の端末に引き継ぐときは、履歴ファイルを保存・読み込みしてください。</p>
+      <p class="settings-note">抽選結果はこのブラウザに保存されます。別の端末で続きを引くときは、履歴をファイルに保存し、その端末で読み込んでください。</p>
       <button class="primary-button" type="submit">設定を保存</button>
     </form>
     <div class="settings-actions"><button class="text-button" id="import-button" type="button">履歴ファイルを読み込む ↗</button><button class="text-button danger" id="reset-button" type="button">新しいゲームを始める ↻</button></div>
@@ -190,9 +190,9 @@
   </dialog>
 
   <dialog class="confirm-dialog" id="confirm-dialog" aria-labelledby="confirm-heading">
-    <p class="eyebrow small" id="confirm-kicker">A FRESH START</p>
+    <p class="eyebrow small" id="confirm-kicker">抽選のやり直し</p>
     <h2 id="confirm-heading">新しいゲームを始めますか？</h2>
-    <p id="confirm-description">現在の抽選結果を消して、1〜75のすべての番号でやり直します。必要なら先に履歴を保存してください。</p>
+    <p id="confirm-description">現在の履歴を消して、最初から引き直します。残しておきたい履歴は、先にファイルへ保存してください。</p>
     <div class="confirm-actions"><button class="secondary-button" id="confirm-cancel" type="button">キャンセル</button><button class="primary-button" id="confirm-ok" type="button">新しく始める</button></div>
   </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

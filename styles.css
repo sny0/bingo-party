@@ -92,3 +92,9 @@ dialog{color:var(--ink);font-family:var(--sans);border:1px solid #d8ceba;border-
 @media(max-width:900px){.fx-caption>strong{font-size:37px}.fx-caption>span{font-size:8px;letter-spacing:2px}.fx-caption{left:2%;width:53%;top:12%}}
 @media(max-width:600px){.fx-rays{left:50%;top:25%;width:230%}.fx-halo{left:50%;top:25%;width:205px}.fx-halo-two{width:240px}.fx-caption{left:4%;width:92%;top:5.5%}.fx-caption>strong{font-size:clamp(30px,9vw,43px)}.fx-caption>span{font-size:7px;letter-spacing:2.5px;margin-bottom:4px}.fx-sparks{left:50%;top:35%}.fx-shockwave{left:60%;top:31%}.fx-shade{background:radial-gradient(ellipse at 50% 27%,#431a2638,#240d2abf 78%,#14091cdf)}.fx-meter{bottom:15px}.fx-meter>b{font-size:6px;letter-spacing:2px}.fx-reveal{gap:24px}.fx-reveal-medallion{width:210px;height:210px}.fx-reveal-medallion>strong{font-size:133px}.fx-reveal-top{font-size:9px;letter-spacing:3px;padding:10px 24px}.fx-reveal-bottom{font-size:10px;letter-spacing:1.2px}.fx-lights>i{width:5px;height:5px}.is-launching .machine{animation-name:show-impact}.confetti{top:33%;left:50%}}
 @media(prefers-reduced-motion:reduce){.show-effects,#ball-trails{display:none}.is-drawing .stage-topline,.is-drawing .result-kicker,.is-drawing .draw-status,.is-drawing .machine-caption,.is-drawing .draw-counter,.is-drawing .draw-counter strong,.is-drawing .keyboard-hint{color:#89785e}.is-drawing .machine{filter:none}.is-drawing .draw-button{background:var(--red);box-shadow:0 4px 0 #7e2626}.is-drawing .result-ball{box-shadow:none}}
+
+/* Japanese labels in the existing header. */
+.brand small{font-size:10px;letter-spacing:1px}.stage-topline{letter-spacing:1px}
+@media(max-width:600px){.brand small{font-size:8px;letter-spacing:.6px}}
+
+.fx-caption>span:empty{display:none}
