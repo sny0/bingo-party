@@ -1,0 +1,15 @@
+{
+  "name": "garagara-bingo-night",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "忘年会のためのガラガラ抽選機つきビンゴ",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "test": "node --test",
+    "build": "node scripts/build.mjs"
+  }
+}
