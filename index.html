@@ -8,8 +8,8 @@
   <title>ガラガラ BINGO NIGHT</title>
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css">
-  <script type="module" src="./app.js"></script>
+  <link rel="stylesheet" href="./styles.css?v=1.1.0">
+  <script type="module" src="./app.js?v=1.1.0"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -43,6 +43,25 @@
 
       <section class="draw-stage" aria-label="ビンゴ抽選機">
         <div class="stage-grain" aria-hidden="true"></div>
+        <div class="show-effects" aria-hidden="true">
+          <div class="fx-shade"></div>
+          <div class="fx-rays"></div>
+          <div class="fx-halo fx-halo-one"></div>
+          <div class="fx-halo fx-halo-two"></div>
+          <div class="fx-speedlines"></div>
+          <div class="fx-sparks" id="fx-sparks"></div>
+          <div class="fx-flash"></div>
+          <div class="fx-shockwave"></div>
+          <div class="fx-caption"><span id="fx-kicker">LET THE LUCK BEGIN</span><strong id="fx-caption">運命を回せ！</strong></div>
+          <div class="fx-reveal">
+            <span class="fx-reveal-top">✦ LUCKY NUMBER ✦</span>
+            <div class="fx-reveal-medallion"><span id="fx-letter">B</span><strong id="fx-number">?</strong></div>
+            <span class="fx-reveal-bottom" id="fx-round">今夜のラッキーナンバー</span>
+          </div>
+          <div class="fx-meter"><span></span><b>LUCK CHARGING</b></div>
+          <div class="fx-rim"></div>
+          <div class="fx-lights" id="fx-lights"></div>
+        </div>
         <div class="stage-topline"><span><i class="live-dot"></i> <span id="stage-label">READY TO ROLL</span></span><span>01 — 75</span></div>
         <div class="stage-layout">
           <div class="machine-scene" id="machine-scene">
@@ -108,6 +127,11 @@
               <path d="M407 356q0 26 53 26t53-26" fill="url(#gold-dark)"/>
               <ellipse cx="460" cy="354" rx="53" ry="16" fill="url(#gold)" stroke="#ab7f3c" stroke-width="2"/>
               <ellipse cx="460" cy="353" rx="43" ry="10" fill="#a1753a"/>
+              <g id="ball-trails" fill="none" stroke-linecap="round" aria-hidden="true">
+                <path d="M324 284 Q383 305 462 333" stroke="#ffc344" stroke-width="13" opacity=".35"/>
+                <path d="M324 284 Q383 305 462 333" stroke="#fff3b0" stroke-width="5"/>
+                <path d="M321 278 Q382 294 455 323" stroke="#ffe082" stroke-width="2" opacity=".7"/>
+              </g>
               <g id="exit-ball" opacity="0">
                 <circle r="19" fill="url(#ball-shine)" stroke="#c19956" stroke-width="1.5"/>
                 <text id="exit-number" y="6" text-anchor="middle" fill="#98302c" font-family="Georgia, serif" font-size="19" font-weight="bold">?</text>
@@ -154,7 +178,7 @@
       <label class="field-label" for="title-input">イベント名</label>
       <input id="title-input" name="title" type="text" maxlength="36" autocomplete="off" placeholder="忘年会ビンゴ">
       <label class="field-label" for="duration-input">抽選の長さ</label>
-      <select id="duration-input" name="duration"><option value="1800">さくっと · 約2秒</option><option value="3400">わくわく · 約3秒</option><option value="5200">じっくり · 約5秒</option></select>
+      <select id="duration-input" name="duration"><option value="1800">さくっと · 約3秒</option><option value="3400">わくわく · 約5秒</option><option value="5200">じっくり · 約6秒</option></select>
       <label class="field-label volume-label" for="volume-input">効果音の音量 <output id="volume-output" for="volume-input">40%</output></label>
       <input id="volume-input" name="volume" type="range" min="0" max="100" step="5" value="40">
       <p class="settings-note">抽選結果はこのブラウザに保存されます。別の端末に引き継ぐときは、履歴ファイルを保存・読み込みしてください。</p>

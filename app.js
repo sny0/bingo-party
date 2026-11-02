@@ -2,7 +2,7 @@ import { TOTAL, newGame, decodeGame, chooseNumber, commitDraw, bingoLetter, clea
 
 const STORAGE_KEY = 'garagara-bingo-v1';
 const $ = id => document.getElementById(id);
-const ui = Object.fromEntries(['sound-button','fullscreen-button','settings-button','settings-dialog','settings-form','settings-message','title-input','duration-input','volume-input','volume-output','event-title','stage-label','machine','draw-button','draw-button-text','draw-status','result-kicker','result-ball','ball-letter','ball-number','drawn-count','remaining-count','number-board','recent-numbers','save-status','export-button','import-button','import-input','reset-button','confirm-dialog','confirm-heading','confirm-description','confirm-kicker','confirm-ok','confirm-cancel','toast','confetti-container','exit-ball','exit-number','drum','crank','inside-balls'].map(id => [id.replaceAll('-', '_'), $(id)]));
+const ui = Object.fromEntries(['sound-button','fullscreen-button','settings-button','settings-dialog','settings-form','settings-message','title-input','duration-input','volume-input','volume-output','event-title','stage-label','machine','draw-button','draw-button-text','draw-status','result-kicker','result-ball','ball-letter','ball-number','drawn-count','remaining-count','number-board','recent-numbers','save-status','export-button','import-button','import-input','reset-button','confirm-dialog','confirm-heading','confirm-description','confirm-kicker','confirm-ok','confirm-cancel','toast','confetti-container','exit-ball','exit-number','drum','crank','inside-balls','fx-sparks','fx-lights','fx-kicker','fx-caption','fx-letter','fx-number','fx-round'].map(id => [id.replaceAll('-', '_'), $(id)]));
 const stage = document.querySelector('.draw-stage');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let game = newGame();
@@ -133,7 +133,14 @@ function unlockAudio() {
       if (!Audio) return;
       audio = new Audio();
       audioMaster = audio.createGain();
-      audioMaster.connect(audio.destination);
+      const compressor = audio.createDynamicsCompressor();
+      compressor.threshold.value = -18;
+      compressor.knee.value = 18;
+      compressor.ratio.value = 5;
+      compressor.attack.value = 0.004;
+      compressor.release.value = 0.2;
+      audioMaster.connect(compressor);
+      compressor.connect(audio.destination);
     }
     syncAudio();
     if (audio.state === 'suspended') audio.resume().catch(() => {});
@@ -161,23 +168,63 @@ function tone(frequency, start, length, gain = 0.15, type = 'sine') {
   } catch { /* Audio is optional; the draw must finish even if it is unavailable. */ }
 }
 
+function sweep(from, to, start, length, gain = 0.12, type = 'sawtooth') {
+  if (!audio || !audioMaster || !game.settings.sound || !game.settings.volume) return;
+  try {
+    const oscillator = audio.createOscillator();
+    const envelope = audio.createGain();
+    const filter = audio.createBiquadFilter();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(from, start);
+    oscillator.frequency.exponentialRampToValueAtTime(to, start + length);
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2400, start);
+    envelope.gain.setValueAtTime(0.001, start);
+    envelope.gain.exponentialRampToValueAtTime(gain, start + Math.min(0.08, length / 4));
+    envelope.gain.exponentialRampToValueAtTime(0.001, start + length);
+    oscillator.connect(filter);
+    filter.connect(envelope);
+    envelope.connect(audioMaster);
+    oscillator.start(start);
+    oscillator.stop(start + length + 0.02);
+    oscillator.onended = () => { oscillator.disconnect(); filter.disconnect(); envelope.disconnect(); };
+  } catch { /* The draw continues when optional audio is unavailable. */ }
+}
+
 function rattle(duration) {
   if (!audio) return;
   const begin = audio.currentTime;
   const seconds = duration / 1000;
-  for (let t = 0; t < seconds - 0.6; t += 0.115) {
-    tone(230 + (Math.sin(t * 17) + 1) * 180, begin + t, 0.055, 0.07, 'triangle');
-    tone(950 + (Math.cos(t * 31) + 1) * 650, begin + t + 0.025, 0.027, 0.035, 'square');
+  let beat = 0;
+  for (let t = 0; t < seconds - 0.08;) {
+    const progress = t / seconds;
+    tone(210 + progress * 380, begin + t, 0.05, 0.13, 'triangle');
+    tone(1100 + progress * 1300, begin + t + 0.018, 0.035, 0.04, 'square');
+    if (beat++ % 3 === 0) tone([261.63, 329.63, 392, 523.25][beat % 4], begin + t, 0.13, 0.07, 'triangle');
+    t += 0.17 - progress * 0.115;
   }
+  sweep(90, 650, begin, seconds, 0.08, 'triangle');
+  sweep(360, 1900, begin + seconds * 0.55, seconds * 0.43, 0.09);
+}
+
+function launchSound() {
+  if (!audio) return;
+  const start = audio.currentTime;
+  sweep(1800, 170, start, 0.38, 0.24);
+  sweep(120, 38, start, 0.3, 0.38, 'sine');
+  [1046.5, 1567.98, 2093].forEach((frequency, i) => tone(frequency, start + i * 0.035, 0.4, 0.09));
 }
 
 function chime() {
   if (!audio) return;
   const start = audio.currentTime;
-  [523.25, 659.25, 783.99, 1046.5].forEach((note, i) => {
-    tone(note, start + i * 0.085, 0.65, 0.14);
-    tone(note * 2, start + i * 0.085, 0.35, 0.025);
+  sweep(140, 45, start, 0.38, 0.32, 'sine');
+  const melody = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5];
+  melody.forEach((note, i) => {
+    tone(note, start + i * 0.095, 0.42, 0.16, 'triangle');
+    tone(note * 2, start + i * 0.095, 0.3, 0.06);
   });
+  [523.25, 659.25, 783.99, 1046.5].forEach(note => tone(note, start + 0.64, 0.6, 0.12));
 }
 
 function playAnimation(target, frames, options) {
@@ -187,65 +234,125 @@ function playAnimation(target, frames, options) {
   return animation;
 }
 
+function createShowEffects() {
+  // Reuse a bounded set of decorative elements on every draw.
+  for (let i = 0; i < 36; i++) {
+    const light = document.createElement('i');
+    light.style.setProperty('--i', i);
+    if (i < 12) { light.style.left = (4 + i * 92 / 11) + '%'; light.style.top = '8px'; }
+    else if (i < 24) { light.style.left = (4 + (i - 12) * 92 / 11) + '%'; light.style.bottom = '8px'; }
+    else if (i < 30) { light.style.left = '8px'; light.style.top = (12 + (i - 24) * 76 / 5) + '%'; }
+    else { light.style.right = '8px'; light.style.top = (12 + (i - 30) * 76 / 5) + '%'; }
+    ui.fx_lights.append(light);
+  }
+  for (let i = 0; i < 26; i++) {
+    const spark = document.createElement('i');
+    spark.style.setProperty('--sx', Math.sin(i * 2.4) * (45 + i * 6) + 'px');
+    spark.style.setProperty('--sy', -(70 + (i % 7) * 32) + 'px');
+    spark.style.setProperty('--delay', -(i % 9) * 0.19 + 's');
+    spark.style.setProperty('--size', (3 + i % 4) + 'px');
+    ui.fx_sparks.append(spark);
+  }
+}
+
+function clearShowEffects() {
+  stage.classList.remove('is-drawing', 'is-launching', 'is-revealing', 'is-finale');
+  ui.confetti_container.replaceChildren();
+  animations.forEach(animation => animation.cancel());
+  animations = [];
+}
+
 function startMachine(duration, number) {
+  clearShowEffects();
+  const launchAt = duration * 0.7;
   ui.exit_number.textContent = number;
   ui.exit_ball.setAttribute('opacity', '0');
-  stage.classList.remove('is-revealing');
+  ui.fx_kicker.textContent = 'LET THE LUCK BEGIN';
+  ui.fx_caption.textContent = '運命を回せ！';
+  stage.style.setProperty('--charge-duration', launchAt + 'ms');
   stage.classList.add('is-drawing');
-  const spinDuration = duration * 0.77;
   if (!reduceMotion.matches) {
     playAnimation(ui.drum, [
       { transform: 'rotate(0deg)', offset: 0 },
-      { transform: 'rotate(55deg)', offset: 0.12 },
-      { transform: 'rotate(680deg)', offset: 0.83 },
-      { transform: 'rotate(720deg)', offset: 1 },
-    ], { duration: spinDuration, easing: 'ease-in-out', fill: 'forwards' });
+      { transform: 'rotate(50deg)', offset: 0.15 },
+      { transform: 'rotate(1330deg)', offset: 0.91 },
+      { transform: 'rotate(1440deg)', offset: 1 },
+    ], { duration: launchAt, easing: 'cubic-bezier(.46,.02,.34,1)', fill: 'forwards' });
     playAnimation(ui.crank, [
-      { transform: 'rotate(0deg)' }, { transform: 'rotate(1080deg)' },
-    ], { duration: spinDuration, easing: 'cubic-bezier(.4,0,.2,1)', fill: 'forwards' });
+      { transform: 'rotate(0deg)' }, { transform: 'rotate(2160deg)' },
+    ], { duration: launchAt, easing: 'cubic-bezier(.46,.02,.34,1)', fill: 'forwards' });
     playAnimation(ui.inside_balls, [
       { transform: 'translate(0,0) rotate(0deg)' },
-      { transform: 'translate(5px,-38px) rotate(-35deg)' },
-      { transform: 'translate(-13px,-12px) rotate(25deg)' },
-      { transform: 'translate(10px,-30px) rotate(-18deg)' },
+      { transform: 'translate(7px,-48px) rotate(-45deg)' },
+      { transform: 'translate(-17px,-16px) rotate(30deg)' },
+      { transform: 'translate(14px,-38px) rotate(-24deg)' },
       { transform: 'translate(0,0) rotate(0deg)' },
-    ], { duration: spinDuration / 3, iterations: 3, easing: 'ease-in-out' });
+    ], { duration: launchAt / 4, iterations: 4, easing: 'ease-in-out' });
+    playAnimation(ui.exit_ball, [
+      { transform: 'translate(328px,285px) scale(.35)', opacity: 0, offset: 0 },
+      { transform: 'translate(340px,282px) scale(1.6)', opacity: 1, offset: 0.13 },
+      { transform: 'translate(386px,305px) scale(1.3)', opacity: 1, offset: 0.4 },
+      { transform: 'translate(421px,314px) scale(1.12)', opacity: 1, offset: 0.6 },
+      { transform: 'translate(460px,332px) scale(1)', opacity: 1, offset: 0.8 },
+      { transform: 'translate(460px,317px) scale(1)', opacity: 1, offset: 0.91 },
+      { transform: 'translate(460px,333px) scale(1)', opacity: 1, offset: 1 },
+    ], { duration: duration - launchAt, delay: launchAt, fill: 'forwards', easing: 'linear' });
   }
-  playAnimation(ui.exit_ball, [
-    { transform: 'translate(328px,285px) scale(.3)', opacity: 0, offset: 0 },
-    { transform: 'translate(335px,290px) scale(1)', opacity: 1, offset: 0.08 },
-    { transform: 'translate(386px,313px) scale(1)', opacity: 1, offset: 0.42 },
-    { transform: 'translate(421px,314px) scale(1)', opacity: 1, offset: 0.6 },
-    { transform: 'translate(460px,332px) scale(1)', opacity: 1, offset: 0.81 },
-    { transform: 'translate(460px,322px) scale(1)', opacity: 1, offset: 0.91 },
-    { transform: 'translate(460px,333px) scale(1)', opacity: 1, offset: 1 },
-  ], { duration: duration * 0.23, delay: duration * 0.77, fill: 'forwards', easing: 'linear' });
+}
+
+function launchEffects() {
+  stage.classList.add('is-launching');
+  ui.fx_kicker.textContent = 'HERE COMES YOUR LUCK';
+  ui.fx_caption.textContent = '運命の一球！';
+  ui.stage_label.textContent = 'LUCK UNLEASHED';
+  ui.draw_status.textContent = 'さあ、ナンバー発表！';
+  launchSound();
 }
 
 function confetti() {
   if (reduceMotion.matches) return;
   ui.confetti_container.replaceChildren();
-  const colors = ['#a72e30', '#caa04f', '#6d7561', '#e1ba6f', '#c96e55'];
-  for (let i = 0; i < 28; i++) {
+  const colors = ['#ffdc69', '#fff5c1', '#eabc4a', '#ff788b', '#7ee9df', '#d4a4ff'];
+  for (let i = 0; i < 64; i++) {
     const piece = document.createElement('i');
     piece.className = 'confetti';
     piece.style.background = colors[i % colors.length];
-    piece.style.setProperty('--x', Math.sin(i * 2.4) * (90 + i * 4) + 'px');
-    piece.style.setProperty('--y', 200 + (i % 9) * 28 + 'px');
+    piece.style.setProperty('--x', Math.sin(i * 2.4) * (90 + i * 5) + 'px');
+    piece.style.setProperty('--y', (80 + (i % 11) * 39) + 'px');
     piece.style.setProperty('--r', (i % 2 ? 1 : -1) * (160 + i * 31) + 'deg');
-    piece.style.animationDelay = (i % 5) * 0.025 + 's';
+    piece.style.animationDelay = (i % 4) * 0.025 + 's';
     ui.confetti_container.append(piece);
   }
-  setTimeout(() => ui.confetti_container.replaceChildren(), 2000);
 }
 
+function revealEffects(number) {
+  animations.forEach(animation => animation.cancel());
+  animations = [];
+  ui.exit_ball.setAttribute('opacity', '1');
+  ui.exit_ball.setAttribute('transform', 'translate(460 333)');
+  stage.classList.remove('is-drawing', 'is-launching');
+  render();
+  ui.fx_number.textContent = number;
+  ui.fx_letter.textContent = bingoLetter(number);
+  ui.fx_round.textContent = '第 ' + game.drawn.length + ' 球 · 今夜のラッキーナンバー';
+  stage.classList.add('is-revealing');
+  if (!reduceMotion.matches) {
+    stage.classList.add('is-finale');
+    ui.draw_button_text.textContent = 'ナンバー発表！';
+  }
+  chime();
+  confetti();
+}
+
+const waitForShow = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+
 async function runDraw() {
-  // Save the selected result before animation, so closing or refreshing cannot lose a draw.
+  // Commit before the show so an interrupted animation cannot lose or repeat a number.
   if (busy) return;
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved && persistent) game = decodeGame(saved);
-  } catch { /* Keep the current in-memory game if storage becomes unavailable. */ }
+  } catch { /* Keep the current game when storage is unavailable. */ }
   if (game.drawn.length === TOTAL) { render(); return; }
   const number = chooseNumber(game.drawn);
   if (number === null) return;
@@ -256,27 +363,26 @@ async function runDraw() {
   ui.draw_button.disabled = true;
   ui.settings_button.disabled = true;
   ui.export_button.disabled = true;
-  ui.draw_button_text.textContent = 'ガラガラ、抽選中…';
-  ui.draw_status.textContent = 'どの番号が出るかな…';
+  ui.draw_button_text.textContent = '運命のナンバー、抽選中！';
+  ui.draw_status.textContent = '光をためて…どの番号が出るかな？';
   ui.result_ball.setAttribute('aria-label', '抽選中');
   ui.ball_number.textContent = previous ?? '?';
-  ui.stage_label.textContent = 'A LITTLE LUCK IS ON ITS WAY';
+  ui.stage_label.textContent = 'LUCK CHARGING';
   const duration = reduceMotion.matches ? 350 : game.settings.duration;
   try {
     startMachine(duration, number);
-    rattle(duration);
-    await new Promise(resolve => setTimeout(resolve, duration));
+    if (!reduceMotion.matches) rattle(duration * 0.7);
+    await waitForShow(duration * 0.7);
+    if (!reduceMotion.matches) launchEffects();
+    await waitForShow(duration * 0.3);
+    revealEffects(number);
+    if (!reduceMotion.matches) await waitForShow(1200);
   } finally {
-    busy = false;
-    stage.classList.remove('is-drawing');
-    animations.forEach(animation => animation.cancel());
-    animations = [];
+    clearShowEffects();
     ui.exit_ball.setAttribute('opacity', '1');
     ui.exit_ball.setAttribute('transform', 'translate(460 333)');
+    busy = false;
     render();
-    stage.classList.add('is-revealing');
-    chime();
-    confetti();
   }
 }
 
@@ -294,7 +400,7 @@ async function draw() {
     }
   } catch {
     busy = false;
-    stage.classList.remove('is-drawing');
+    clearShowEffects();
     render();
     notify('抽選を開始できませんでした。ページを再読み込みしてください。');
   }
@@ -417,6 +523,7 @@ window.addEventListener('storage', event => {
 
 readSaved();
 createBoard();
+createShowEffects();
 render();
 $('edition-year').textContent = new Date().getFullYear();
 if (storageWarning) notify('保存されていた履歴を読み込めませんでした。履歴ファイルがあれば設定から読み込めます。');
