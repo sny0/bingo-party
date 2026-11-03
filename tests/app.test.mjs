@@ -9,7 +9,7 @@ const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 
 // Exercise real app events and the persisted game with a deterministic clock.
 // This harness checks state transitions; it does not emulate CSS or browser layout.
-function mount({ saved, reduced = false, failAnimation = false } = {}) {
+function mount({ saved, reduced = false, failAnimation = false, failDialog = false } = {}) {
   const elements = new Map();
   const storage = saved ?? new Map([['garagara-bingo-v1', JSON.stringify(bingo.newGame({ sound: false, duration: 1800 }))]]);
   const timers = new Map();
@@ -52,8 +52,16 @@ function mount({ saved, reduced = false, failAnimation = false } = {}) {
       animated.push(animation);
       return animation;
     }
-    showModal() { this.open = true; }
-    close() { this.open = false; }
+    showModal() {
+      if (failDialog && this.id === 'draw-dialog') throw new Error('Modal unavailable');
+      this.open = true;
+    }
+    close() {
+      if (!this.open) return;
+      this.open = false;
+      for (const callback of this.listeners.get('close') ?? []) callback({});
+    }
+    focus(options) { document.activeElement = this; this.focusOptions = options; }
     remove() {}
   }
   for (const match of html.matchAll(/\bid="([^"]+)"/g)) new Element(match[1]);
@@ -94,7 +102,8 @@ function mount({ saved, reduced = false, failAnimation = false } = {}) {
     throw new Error('Timer loop did not settle');
   }
   return {
-    elements, stage, storage, animated, tick,
+    elements, stage, storage, animated, tick, document,
+    dispatch: (id, name, event = {}) => Promise.all((elements.get(id).listeners.get(name) ?? []).map(callback => callback(event))),
     snapshot: () => JSON.parse(storage.get('garagara-bingo-v1')),
     click: id => {
       const element = elements.get(id);
@@ -110,6 +119,8 @@ test('charge, launch and finale keep one saved draw and block repeated clicks', 
   assert.equal(app.snapshot().drawn.length, 1, 'result is committed before the show');
   assert.equal(app.elements.get('draw-button').disabled, true);
   assert.equal(app.elements.get('ball-number').textContent, '?');
+  assert.equal(app.elements.get('draw-dialog').open, true);
+  assert.equal(app.document.body.classList.contains('showing-draw'), true);
   assert.equal(app.stage.classList.contains('is-drawing'), true);
   await app.click('draw-button');
   assert.equal(app.snapshot().drawn.length, 1);
@@ -131,6 +142,9 @@ test('charge, launch and finale keep one saved draw and block repeated clicks', 
   assert.equal(app.elements.get('draw-button').disabled, false);
   assert.equal(app.elements.get('settings-button').disabled, false);
   assert.equal(app.stage.classList.contains('is-finale'), false);
+  assert.equal(app.elements.get('draw-dialog').open, false);
+  assert.equal(app.document.activeElement, app.elements.get('draw-button'));
+  assert.equal(app.document.body.classList.contains('showing-draw'), false);
   assert.equal(app.elements.get('confetti-container').children.length, 0);
   assert.ok(app.animated.every(animation => animation.canceled));
 });
@@ -143,6 +157,7 @@ test('reloading mid-show restores the committed number without replay or loss', 
   assert.equal(Number(restored.elements.get('ball-number').textContent), number);
   assert.equal(Number(restored.elements.get('drawn-count').textContent), 1);
   assert.equal(restored.stage.classList.contains('is-drawing'), false);
+  assert.equal(restored.elements.get('draw-dialog').open, false);
   assert.equal(restored.elements.get('draw-button').disabled, false);
   await first.tick(3500);
   await completion;
@@ -197,6 +212,96 @@ test('the seventy-fifth result gets its finale and leaves the completed game dis
   await completion;
   assert.equal(app.elements.get('draw-button').disabled, true);
   assert.equal(Number(app.elements.get('remaining-count').textContent), 0);
+  assert.equal(app.elements.get('draw-dialog').open, false);
+  assert.equal(app.document.activeElement, app.elements.get('export-button'));
   await app.click('draw-button');
   assert.equal(app.snapshot().drawn.length, 75);
+});
+
+test('skipping during any show phase returns to the board with exactly one result', async () => {
+  for (const elapsed of [0, 1500, 1900]) {
+    const app = mount();
+    const completion = app.click('draw-button');
+    await app.tick(elapsed);
+    await app.click('skip-effects');
+    await completion;
+    assert.equal(app.snapshot().drawn.length, 1);
+    assert.equal(Number(app.elements.get('ball-number').textContent), app.snapshot().drawn[0]);
+    assert.equal(app.elements.get('draw-dialog').open, false);
+    assert.equal(app.document.body.classList.contains('showing-draw'), false);
+    assert.equal(app.document.activeElement, app.elements.get('draw-button'));
+    assert.equal(app.elements.get('draw-button').disabled, false);
+    assert.ok(app.animated.every(animation => animation.canceled));
+
+    const next = app.click('draw-button');
+    await app.tick(1900);
+    assert.equal(app.elements.get('draw-dialog').open, true, 'an old skipped timer cannot close the next draw');
+    assert.equal(app.stage.classList.contains('is-finale'), true);
+    await app.click('skip-effects');
+    await next;
+    assert.equal(new Set(app.snapshot().drawn).size, 2);
+  }
+});
+
+test('Escape skips the show without canceling the selected number', async () => {
+  const app = mount();
+  const completion = app.click('draw-button');
+  let prevented = false;
+  await app.dispatch('draw-dialog', 'cancel', { preventDefault() { prevented = true; } });
+  await completion;
+  assert.equal(prevented, true);
+  assert.equal(app.elements.get('draw-dialog').open, false);
+  assert.equal(app.snapshot().drawn.length, 1);
+  assert.equal(app.elements.get('draw-button').disabled, false);
+});
+
+test('closing the dialog externally also settles the pending result', async () => {
+  const app = mount();
+  const completion = app.click('draw-button');
+  await app.tick(600);
+  app.elements.get('draw-dialog').close();
+  await completion;
+  assert.equal(app.snapshot().drawn.length, 1);
+  assert.equal(app.elements.get('draw-dialog').open, false);
+  assert.equal(app.document.body.classList.contains('showing-draw'), false);
+  assert.equal(app.elements.get('settings-button').disabled, false);
+});
+
+test('failure to open the modal preserves the draw and unlocks the board', async () => {
+  const app = mount({ failDialog: true });
+  await app.click('draw-button');
+  assert.equal(app.snapshot().drawn.length, 1);
+  assert.equal(app.elements.get('draw-dialog').open, false);
+  assert.equal(app.document.body.classList.contains('showing-draw'), false);
+  assert.equal(Number(app.elements.get('ball-number').textContent), app.snapshot().drawn[0]);
+  assert.equal(app.elements.get('draw-button').disabled, false);
+});
+
+test('sound can be toggled inside the modal and both controls stay in sync', async () => {
+  const app = mount();
+  const completion = app.click('draw-button');
+  assert.equal(app.elements.get('draw-sound-button').getAttribute('aria-pressed'), 'false');
+  await app.click('draw-sound-button');
+  assert.equal(app.elements.get('sound-button').getAttribute('aria-pressed'), 'true');
+  assert.equal(app.elements.get('draw-sound-button').getAttribute('aria-pressed'), 'true');
+  assert.equal(app.elements.get('ball-number').textContent, '?');
+  await app.click('draw-sound-button');
+  assert.equal(app.snapshot().settings.sound, false);
+  await app.click('skip-effects');
+  await completion;
+});
+
+test('a delayed close event from the previous show cannot skip a newly opened dialog', async () => {
+  const app = mount();
+  const first = app.click('draw-button');
+  await app.click('skip-effects');
+  await first;
+  const second = app.click('draw-button');
+  await app.dispatch('draw-dialog', 'close');
+  await app.tick(1600);
+  assert.equal(app.elements.get('draw-dialog').open, true);
+  assert.equal(app.stage.classList.contains('is-launching'), true);
+  assert.equal(app.snapshot().drawn.length, 2);
+  await app.click('skip-effects');
+  await second;
 });

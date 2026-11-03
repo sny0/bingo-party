@@ -2,7 +2,7 @@ import { TOTAL, newGame, decodeGame, chooseNumber, commitDraw, bingoLetter, clea
 
 const STORAGE_KEY = 'garagara-bingo-v1';
 const $ = id => document.getElementById(id);
-const ui = Object.fromEntries(['sound-button','fullscreen-button','settings-button','settings-dialog','settings-form','settings-message','title-input','duration-input','volume-input','volume-output','event-title','stage-label','machine','draw-button','draw-button-text','draw-status','result-kicker','result-ball','ball-letter','ball-number','drawn-count','remaining-count','number-board','recent-numbers','save-status','export-button','import-button','import-input','reset-button','confirm-dialog','confirm-heading','confirm-description','confirm-kicker','confirm-ok','confirm-cancel','toast','confetti-container','exit-ball','exit-number','drum','crank','inside-balls','fx-sparks','fx-lights','fx-kicker','fx-caption','fx-letter','fx-number','fx-round'].map(id => [id.replaceAll('-', '_'), $(id)]));
+const ui = Object.fromEntries(['sound-button','fullscreen-button','settings-button','settings-dialog','settings-form','settings-message','title-input','duration-input','volume-input','volume-output','event-title','stage-label','machine','draw-button','draw-button-text','draw-status','result-kicker','result-ball','ball-letter','ball-number','drawn-count','remaining-count','number-board','recent-numbers','save-status','export-button','import-button','import-input','reset-button','confirm-dialog','confirm-heading','confirm-description','confirm-kicker','confirm-ok','confirm-cancel','toast','confetti-container','exit-ball','exit-number','drum','crank','inside-balls','fx-sparks','fx-lights','fx-kicker','fx-caption','fx-letter','fx-number','fx-round','draw-dialog','draw-dialog-heading','dialog-status','skip-effects','draw-sound-button'].map(id => [id.replaceAll('-', '_'), $(id)]));
 const stage = document.querySelector('.draw-stage');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let game = newGame();
@@ -14,6 +14,9 @@ let toastTimer;
 let confirmationAction = null;
 let storageWarning = false;
 let animations = [];
+let showWaiter = null;
+let skipRequested = false;
+const soundSources = new Set();
 
 function notify(message) {
   ui.toast.textContent = message;
@@ -75,14 +78,21 @@ function createBoard() {
   }
 }
 
+function updateSoundButtons() {
+  for (const button of [ui.sound_button, ui.draw_sound_button]) {
+    button.setAttribute('aria-pressed', String(game.settings.sound));
+    button.setAttribute('aria-label', game.settings.sound ? '効果音をオフにする' : '効果音をオンにする');
+  }
+}
+
 function render() {
   const drawn = new Set(game.drawn);
   const latest = game.drawn.at(-1);
   const complete = game.drawn.length === TOTAL;
   ui.event_title.textContent = game.settings.title;
+  ui.event_title.title = game.settings.title;
   document.title = game.settings.title + ' | BINGO NIGHT';
-  ui.sound_button.setAttribute('aria-pressed', String(game.settings.sound));
-  ui.sound_button.setAttribute('aria-label', game.settings.sound ? '効果音をオフにする' : '効果音をオンにする');
+  updateSoundButtons();
   ui.drawn_count.textContent = game.drawn.length;
   ui.remaining_count.textContent = TOTAL - game.drawn.length;
   ui.ball_number.textContent = latest ?? '?';
@@ -162,9 +172,10 @@ function tone(frequency, start, length, gain = 0.15, type = 'sine') {
     envelope.gain.exponentialRampToValueAtTime(0.001, start + length);
     oscillator.connect(envelope);
     envelope.connect(audioMaster);
+    soundSources.add(oscillator);
     oscillator.start(start);
     oscillator.stop(start + length + 0.01);
-    oscillator.onended = () => { oscillator.disconnect(); envelope.disconnect(); };
+    oscillator.onended = () => { soundSources.delete(oscillator); oscillator.disconnect(); envelope.disconnect(); };
   } catch { /* Audio is optional; the draw must finish even if it is unavailable. */ }
 }
 
@@ -185,9 +196,10 @@ function sweep(from, to, start, length, gain = 0.12, type = 'sawtooth') {
     oscillator.connect(filter);
     filter.connect(envelope);
     envelope.connect(audioMaster);
+    soundSources.add(oscillator);
     oscillator.start(start);
     oscillator.stop(start + length + 0.02);
-    oscillator.onended = () => { oscillator.disconnect(); filter.disconnect(); envelope.disconnect(); };
+    oscillator.onended = () => { soundSources.delete(oscillator); oscillator.disconnect(); filter.disconnect(); envelope.disconnect(); };
   } catch { /* The draw continues when optional audio is unavailable. */ }
 }
 
@@ -306,6 +318,7 @@ function launchEffects() {
   ui.fx_caption.textContent = '出た！';
   ui.stage_label.textContent = '番号が出ます';
   ui.draw_status.textContent = '番号が出ます。';
+  ui.dialog_status.textContent = '玉が出ます。';
   launchSound();
 }
 
@@ -335,6 +348,8 @@ function revealEffects(number) {
   ui.fx_number.textContent = number;
   ui.fx_letter.textContent = bingoLetter(number);
   ui.fx_round.textContent = '第' + game.drawn.length + '球';
+  ui.draw_dialog_heading.textContent = '抽選結果';
+  ui.dialog_status.textContent = '第' + game.drawn.length + '球 · ' + bingoLetter(number) + 'の' + number + '番';
   stage.classList.add('is-revealing');
   if (!reduceMotion.matches) {
     stage.classList.add('is-finale');
@@ -344,10 +359,34 @@ function revealEffects(number) {
   confetti();
 }
 
-const waitForShow = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+function stopShowAudio() {
+  for (const source of soundSources) {
+    try { source.stop(); } catch { /* The source may already have ended. */ }
+  }
+  soundSources.clear();
+}
+
+function skipDrawShow() {
+  if (!busy) return;
+  skipRequested = true;
+  stopShowAudio();
+  showWaiter?.();
+}
+
+const waitForShow = milliseconds => new Promise(resolve => {
+  let timer;
+  const finish = () => {
+    clearTimeout(timer);
+    if (showWaiter === finish) showWaiter = null;
+    resolve();
+  };
+  showWaiter = finish;
+  timer = setTimeout(finish, milliseconds);
+  if (skipRequested) finish();
+});
 
 async function runDraw() {
-  // Commit before the show so an interrupted animation cannot lose or repeat a number.
+  // The result is saved before the modal opens, including when the show is skipped.
   if (busy) return;
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -360,6 +399,7 @@ async function runDraw() {
   game = commitDraw(game, number);
   persist();
   busy = true;
+  skipRequested = false;
   ui.draw_button.disabled = true;
   ui.settings_button.disabled = true;
   ui.export_button.disabled = true;
@@ -368,21 +408,34 @@ async function runDraw() {
   ui.result_ball.setAttribute('aria-label', '抽選中');
   ui.ball_number.textContent = previous ?? '?';
   ui.stage_label.textContent = '抽選中';
+  ui.draw_dialog_heading.textContent = '抽選中';
+  ui.dialog_status.textContent = '抽選機を回しています。';
   const duration = reduceMotion.matches ? 350 : game.settings.duration;
   try {
+    ui.draw_dialog.showModal();
+    document.body.classList.add('showing-draw');
     startMachine(duration, number);
     if (!reduceMotion.matches) rattle(duration * 0.7);
     await waitForShow(duration * 0.7);
+    if (skipRequested) return;
     if (!reduceMotion.matches) launchEffects();
     await waitForShow(duration * 0.3);
+    if (skipRequested) return;
     revealEffects(number);
-    if (!reduceMotion.matches) await waitForShow(1200);
+    if (!reduceMotion.matches) await waitForShow(1300);
   } finally {
+    showWaiter?.();
+    showWaiter = null;
     clearShowEffects();
+    stopShowAudio();
     ui.exit_ball.setAttribute('opacity', '1');
     ui.exit_ball.setAttribute('transform', 'translate(460 333)');
     busy = false;
     render();
+    if (ui.draw_dialog.open) ui.draw_dialog.close();
+    document.body.classList.remove('showing-draw');
+    const nextControl = ui.draw_button.disabled ? ui.export_button : ui.draw_button;
+    nextControl.focus({ preventScroll: true });
   }
 }
 
@@ -426,6 +479,14 @@ function askConfirmation({ title, description, button, kicker = '抽選のやり
 }
 
 ui.draw_button.addEventListener('click', draw);
+ui.skip_effects.addEventListener('click', skipDrawShow);
+ui.draw_dialog.addEventListener('cancel', event => {
+  event.preventDefault();
+  skipDrawShow();
+});
+ui.draw_dialog.addEventListener('close', () => {
+  if (busy && !ui.draw_dialog.open) skipDrawShow();
+});
 document.addEventListener('keydown', event => {
   if (event.code !== 'Space' || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
   if (document.querySelector('dialog[open]')) return;
@@ -445,15 +506,16 @@ ui.settings_form.addEventListener('submit', event => {
   notify('設定を保存しました。');
 });
 ui.volume_input.addEventListener('input', () => { ui.volume_output.value = ui.volume_input.value + '%'; });
-ui.sound_button.addEventListener('click', () => {
+function toggleSound() {
   game.settings.sound = !game.settings.sound;
   persist();
   syncAudio();
   // Keep the drawing state and its hidden result unchanged when sound is toggled mid-animation.
-  ui.sound_button.setAttribute('aria-pressed', String(game.settings.sound));
-  ui.sound_button.setAttribute('aria-label', game.settings.sound ? '効果音をオフにする' : '効果音をオンにする');
+  updateSoundButtons();
   if (game.settings.sound) { unlockAudio(); tone(659.25, audio?.currentTime ?? 0, 0.15, 0.1); }
-});
+}
+ui.sound_button.addEventListener('click', toggleSound);
+ui.draw_sound_button.addEventListener('click', toggleSound);
 
 if (!document.fullscreenEnabled) ui.fullscreen_button.hidden = true;
 ui.fullscreen_button.addEventListener('click', async () => {
@@ -525,7 +587,6 @@ readSaved();
 createBoard();
 createShowEffects();
 render();
-$('edition-year').textContent = new Date().getFullYear();
 if (storageWarning) notify('このブラウザの履歴を復元できませんでした。保存済みの履歴ファイルは、設定画面から読み込めます。');
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));

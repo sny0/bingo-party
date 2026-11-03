@@ -1,5 +1,5 @@
-const CACHE = 'garagara-bingo-v1.1.1';
-const ASSETS = ['./', './index.html', './styles.css?v=1.1.0', './app.js?v=1.1.0', './src/bingo.js', './icon.svg', './manifest.webmanifest'];
+const CACHE = 'garagara-bingo-v1.2.0';
+const ASSETS = ['./', './index.html', './styles.css?v=1.2.0', './app.js?v=1.2.0', './src/bingo.js', './icon.svg', './manifest.webmanifest'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
 });

@@ -15,11 +15,13 @@ for (const file of files) {
   hash.update(await readFile(target));
 }
 const revision = hash.digest('hex').slice(0, 12);
-const worker = (await readFile(resolve(root, 'sw.js'), 'utf8')).replace('garagara-bingo-v1.1.1', 'garagara-bingo-' + revision);
+const worker = (await readFile(resolve(root, 'sw.js'), 'utf8')).replace('garagara-bingo-v1.2.0', 'garagara-bingo-' + revision);
 await writeFile(resolve(output, 'sw.js'), worker);
 await writeFile(resolve(output, '.nojekyll'), '');
 const html = await readFile(resolve(output, 'index.html'), 'utf8');
+const precached = new Set([...worker.matchAll(/'(\.\/[^']*)'/g)].map(match => match[1]));
 for (const match of html.matchAll(/(?:src|href)="\.\/([^"]+)"/g)) {
   if (!files.includes(match[1].split('?')[0])) throw new Error('Missing referenced asset: ' + match[1]);
+  if (!precached.has('./' + match[1])) throw new Error('Asset is missing from the offline cache: ' + match[1]);
 }
 console.log('Built ' + (files.length + 2) + ' files into dist/ · revision ' + revision);

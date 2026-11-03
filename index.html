@@ -8,8 +8,8 @@
   <title>ガラガラ BINGO NIGHT</title>
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=1.1.1">
-  <script type="module" src="./app.js?v=1.1.1"></script>
+  <link rel="stylesheet" href="./styles.css?v=1.2.0">
+  <script type="module" src="./app.js?v=1.2.0"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -31,16 +31,67 @@
       </div>
     </header>
 
-    <main>
-      <section class="intro" aria-labelledby="main-heading">
-        <div>
-          <p class="eyebrow"><span class="tiny-star">✦</span> 忘年会 · <span id="edition-year">2026</span></p>
-          <h1 id="main-heading">ビンゴ<span>抽選機</span></h1>
-          <p class="intro-copy" id="event-title">忘年会ビンゴ</p>
+    <main class="dashboard">
+      <section class="overview" aria-label="最新の抽選結果">
+        <div class="number-orbit">
+          <span class="orbit-star orbit-star-one" aria-hidden="true">✦</span>
+          <span class="orbit-star orbit-star-two" aria-hidden="true">✧</span>
+          <div class="result-ball" id="result-ball">
+            <span class="ball-letter" id="ball-letter">BINGO</span>
+            <span class="ball-number" id="ball-number">?</span>
+            <span class="ball-bottom" aria-hidden="true">BINGO NIGHT</span>
+          </div>
         </div>
-        <div class="intro-note" aria-hidden="true"><span class="note-star">✧</span></div>
+        <div class="overview-copy">
+          <h1 id="event-title">忘年会ビンゴ</h1>
+          <p class="result-kicker" id="result-kicker">今回の番号</p>
+          <p class="draw-status" id="draw-status" role="status" aria-live="polite" aria-atomic="true">ボタンを押して抽選を始めてください。</p>
+          <div class="draw-counter">
+            <span>抽選済み <strong id="drawn-count">0</strong><small> / 75</small></span>
+            <span class="counter-divider"></span>
+            <span>残り <strong id="remaining-count">75</strong><small> 個</small></span>
+          </div>
+        </div>
       </section>
 
+      <section class="history-section" aria-labelledby="history-heading">
+        <div class="section-heading">
+          <h2 id="history-heading">これまでの番号</h2>
+          <span class="save-status" id="save-status"><i class="save-dot"></i> このブラウザに自動保存</span>
+        </div>
+        <div class="number-board" id="number-board" aria-label="1から75の抽選済み番号一覧"></div>
+        <div class="recent-line">
+          <span class="recent-label">直近の抽選</span>
+          <ol id="recent-numbers" aria-label="直近の抽選結果"><li class="recent-empty">まだ抽選されていません</li></ol>
+        </div>
+        <div class="board-legend">
+          <span><i class="legend-dot drawn-dot"></i> 抽選済み</span>
+          <span><i class="legend-dot latest-dot"></i> 直前の番号</span>
+          <button class="text-button" id="export-button" type="button">履歴を保存 <span aria-hidden="true">↗</span></button>
+        </div>
+      </section>
+
+      <section class="draw-controls" aria-label="抽選の操作">
+        <button class="draw-button" id="draw-button" type="button">
+          <span class="draw-button-icon" aria-hidden="true">↻</span>
+          <span id="draw-button-text">ガラガラを回す</span>
+          <span class="button-arrow" aria-hidden="true">→</span>
+        </button>
+        <p class="keyboard-hint"><kbd>SPACE</kbd> キーでも抽選できます</p>
+      </section>
+    </main>
+  </div>
+
+  <dialog class="draw-dialog" id="draw-dialog" aria-labelledby="draw-dialog-heading" aria-describedby="dialog-status">
+    <div class="draw-dialog-heading">
+      <h2 id="draw-dialog-heading">抽選中</h2>
+      <div class="header-tools">
+        <button class="icon-button" id="draw-sound-button" type="button" aria-label="効果音をオフにする" aria-pressed="true" title="効果音">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-muted" d="m16 9 5 6m0-6-5 6"/></svg>
+        </button>
+        <button class="skip-button" id="skip-effects" type="button" autofocus>演出をスキップ</button>
+      </div>
+    </div>
       <section class="draw-stage" aria-label="ビンゴ抽選機">
         <div class="stage-grain" aria-hidden="true"></div>
         <div class="show-effects" aria-hidden="true">
@@ -142,35 +193,12 @@
             <p class="machine-caption"><span aria-hidden="true">↻</span> 一度出た番号は、次の抽選から外れます。</p>
           </div>
 
-          <div class="result-panel">
-            <p class="result-kicker" id="result-kicker">今回の番号</p>
-            <div class="number-orbit" id="number-orbit">
-              <span class="orbit-star orbit-star-one" aria-hidden="true">✦</span>
-              <span class="orbit-star orbit-star-two" aria-hidden="true">✧</span>
-              <div class="result-ball" id="result-ball">
-                <span class="ball-letter" id="ball-letter">BINGO</span>
-                <span class="ball-number" id="ball-number">?</span>
-                <span class="ball-bottom" aria-hidden="true">BINGO NIGHT</span>
-              </div>
-            </div>
-            <p class="draw-status" id="draw-status" role="status" aria-live="polite" aria-atomic="true">ボタンを押して抽選を始めてください。</p>
-            <button class="draw-button" id="draw-button" type="button"><span class="draw-button-icon" aria-hidden="true">↻</span><span id="draw-button-text">ガラガラを回す</span><span class="button-arrow" aria-hidden="true">→</span></button>
-            <p class="keyboard-hint"><kbd>SPACE</kbd> キーでも抽選できます</p>
-            <div class="draw-counter"><span>抽選済み <strong id="drawn-count">0</strong><small> / 75</small></span><span class="counter-divider"></span><span>残り <strong id="remaining-count">75</strong><small> 個</small></span></div>
-          </div>
+
         </div>
         <div class="confetti-container" id="confetti-container" aria-hidden="true"></div>
       </section>
-
-      <section class="history-section" aria-labelledby="history-heading">
-        <div class="section-heading"><div><h2 id="history-heading">これまでの番号</h2></div><span class="save-status" id="save-status"><i class="save-dot"></i> このブラウザに自動保存</span></div>
-        <div class="recent-line"><span class="recent-label">直近の抽選</span><ol id="recent-numbers" aria-label="直近の抽選結果"><li class="recent-empty">まだ抽選されていません</li></ol></div>
-        <div class="number-board" id="number-board" aria-label="1から75の抽選済み番号一覧"></div>
-        <div class="board-legend"><span><i class="legend-dot drawn-dot"></i> 抽選済み</span><span><i class="legend-dot latest-dot"></i> 直前の番号</span><button class="text-button" id="export-button" type="button">履歴を保存 <span aria-hidden="true">↗</span></button></div>
-      </section>
-    </main>
-    <footer class="footer"><span>BINGO NIGHT</span><span class="footer-star" aria-hidden="true">✳</span></footer>
-  </div>
+    <p class="dialog-status" id="dialog-status" role="status" aria-live="polite" aria-atomic="true">抽選機を回しています。</p>
+  </dialog>
 
   <dialog class="settings-dialog" id="settings-dialog" aria-labelledby="settings-heading">
     <div class="dialog-heading"><div><h2 id="settings-heading">設定</h2></div><button class="icon-button close-dialog" type="button" aria-label="設定を閉じる">×</button></div>
