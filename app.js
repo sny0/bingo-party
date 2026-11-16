@@ -241,17 +241,20 @@ function revealSound() {
 
 function launchConfetti() {
   const colors = ['#ffd267', '#fff3cc', '#f25378', '#51c8ed', '#58df9f', '#c09aff'];
-  const pieces = Array.from({ length: 36 }, (_, index) => {
+  const columns = 8;
+  const rows = 7;
+  const pieces = Array.from({ length: columns * rows }, (_, index) => {
     const piece = document.createElement('span');
     const direction = index % 2 === 0 ? -1 : 1;
-    piece.style.setProperty('--paper-color', colors[Math.floor(index / 2) % colors.length]);
-    piece.style.setProperty('--origin', (50 + direction * (16 + Math.random() * 5)) + '%');
-    piece.style.setProperty('--drift', direction * (8 + Math.random() * 17) + 'cqw');
-    piece.style.setProperty('--rise', -(16 + Math.random() * 23) + 'cqh');
-    piece.style.setProperty('--fall', (42 + Math.random() * 14) + 'cqh');
+    const x = 3 + ((index % columns + Math.random()) / columns) * 94;
+    const y = 4 + ((Math.floor(index / columns) + Math.random()) / rows) * 89;
+    piece.style.setProperty('--paper-color', colors[index % colors.length]);
+    piece.style.setProperty('--origin-x', x + '%');
+    piece.style.setProperty('--origin-y', y + '%');
+    piece.style.setProperty('--drift', direction * Math.min(2 + Math.random() * 7, direction < 0 ? x - 1 : 98 - x) + 'cqw');
+    piece.style.setProperty('--fall', Math.min(98 - y, 12 + Math.random() * 20) + 'cqh');
     piece.style.setProperty('--turn', direction * (220 + Math.random() * 380) + 'deg');
-    piece.style.setProperty('--delay', Math.random() * 105 + 'ms');
-    piece.style.setProperty('--time', 1050 + Math.random() * 480 + 'ms');
+    piece.style.setProperty('--time', 1450 + Math.random() * 550 + 'ms');
     piece.addEventListener('animationend', () => piece.remove(), { once: true });
     return piece;
   });
@@ -540,7 +543,7 @@ readSaved();
 createBoard();
 render();
 if ('WebGL2RenderingContext' in window && !reduceMotion.matches) {
-  import('./src/machine.js?v=1.3.8')
+  import('./src/machine.js?v=1.3.9')
     .then(({ createMachine }) => createMachine(ui.machine_canvas, () => stage.classList.remove('has-machine-3d')))
     .then(loaded => { machine = loaded; })
     .catch(() => { /* The static poster and number readout work without 3D. */ });
