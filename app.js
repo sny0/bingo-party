@@ -2,7 +2,7 @@ import { TOTAL, newGame, decodeGame, chooseNumber, commitDraw, bingoLetter, clea
 
 const STORAGE_KEY = 'garagara-bingo-v1';
 const $ = id => document.getElementById(id);
-const ui = Object.fromEntries(['sound-button','fullscreen-button','settings-button','settings-dialog','settings-form','settings-message','title-input','duration-input','volume-input','volume-output','event-title','draw-button','draw-button-text','draw-status','result-kicker','result-ball','ball-letter','ball-number','drawn-count','remaining-count','number-board','recent-numbers','save-status','export-button','import-button','import-input','reset-button','confirm-dialog','confirm-heading','confirm-description','confirm-kicker','confirm-ok','confirm-cancel','toast','machine-canvas','fallback-letter','fallback-number','skip-label','draw-dialog','draw-dialog-heading','dialog-status','skip-effects','draw-sound-button'].map(id => [id.replaceAll('-', '_'), $(id)]));
+const ui = Object.fromEntries(['sound-button','fullscreen-button','settings-button','settings-dialog','settings-form','settings-message','title-input','duration-input','volume-input','volume-output','event-title','draw-button','draw-button-text','draw-status','result-kicker','result-ball','ball-letter','ball-number','drawn-count','remaining-count','number-board','recent-numbers','save-status','export-button','import-button','import-input','reset-button','confirm-dialog','confirm-heading','confirm-description','confirm-kicker','confirm-ok','confirm-cancel','toast','machine-canvas','confetti-layer','fallback-letter','fallback-number','skip-label','draw-dialog','draw-dialog-heading','dialog-status','skip-effects','draw-sound-button'].map(id => [id.replaceAll('-', '_'), $(id)]));
 const stage = document.querySelector('.draw-stage');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let game = newGame();
@@ -227,18 +227,40 @@ function releaseSound() {
 function revealSound() {
   if (!audio || !game.settings.sound) return;
   const now = audio.currentTime;
-  sweep(117, 54, now, 0.16, 0.22, 'triangle');
-  tone(520, now, 0.08, 0.11, 'triangle');
-  sweep(480, 1450, now + 0.05, 0.20, 0.073, 'triangle');
-  for (const [beat, frequency] of [523.25, 659.25, 783.99, 1046.5].entries()) {
-    const start = now + 0.08 + beat * 0.065;
-    tone(frequency, start, 0.24, 0.10, 'triangle');
-    tone(frequency * 2, start, 0.15, 0.032);
+  tone(105, now, 0.12, 0.14, 'triangle');
+  tone(131, now + 0.12, 0.24, 0.12, 'triangle');
+  for (const frequency of [392, 493.88, 587.33]) {
+    tone(frequency, now, 0.095, 0.13, 'triangle');
+    tone(frequency * 2, now, 0.075, 0.025, 'sawtooth');
   }
+  for (const frequency of [523.25, 659.25, 783.99]) {
+    tone(frequency, now + 0.12, 0.48, 0.14, 'triangle');
+    tone(frequency * 2, now + 0.12, 0.31, 0.032, 'sawtooth');
+  }
+}
+
+function launchConfetti() {
+  const colors = ['#ffd267', '#fff3cc', '#f25378', '#51c8ed', '#58df9f', '#c09aff'];
+  const pieces = Array.from({ length: 36 }, (_, index) => {
+    const piece = document.createElement('span');
+    const direction = index % 2 === 0 ? -1 : 1;
+    piece.style.setProperty('--paper-color', colors[Math.floor(index / 2) % colors.length]);
+    piece.style.setProperty('--origin', (50 + direction * (16 + Math.random() * 5)) + '%');
+    piece.style.setProperty('--drift', direction * (8 + Math.random() * 17) + 'cqw');
+    piece.style.setProperty('--rise', -(16 + Math.random() * 23) + 'cqh');
+    piece.style.setProperty('--fall', (42 + Math.random() * 14) + 'cqh');
+    piece.style.setProperty('--turn', direction * (220 + Math.random() * 380) + 'deg');
+    piece.style.setProperty('--delay', Math.random() * 105 + 'ms');
+    piece.style.setProperty('--time', 1050 + Math.random() * 480 + 'ms');
+    piece.addEventListener('animationend', () => piece.remove(), { once: true });
+    return piece;
+  });
+  ui.confetti_layer.replaceChildren(...pieces);
 }
 
 function clearShowEffects() {
   machine?.stop();
+  ui.confetti_layer.replaceChildren();
   stage.classList.remove('is-drawing', 'is-launching', 'is-finale', 'has-machine-3d');
 }
 
@@ -275,7 +297,10 @@ function revealEffects(number) {
   ui.draw_dialog_heading.textContent = '抽選結果';
   ui.dialog_status.textContent = letter + 'の' + number + '番が出ました。';
   ui.skip_label.textContent = '閉じる';
-  if (!reduceMotion.matches) revealSound();
+  if (!reduceMotion.matches) {
+    revealSound();
+    launchConfetti();
+  }
 }
 
 function stopShowAudio() {
@@ -515,7 +540,7 @@ readSaved();
 createBoard();
 render();
 if ('WebGL2RenderingContext' in window && !reduceMotion.matches) {
-  import('./src/machine.js?v=1.3.7')
+  import('./src/machine.js?v=1.3.8')
     .then(({ createMachine }) => createMachine(ui.machine_canvas, () => stage.classList.remove('has-machine-3d')))
     .then(loaded => { machine = loaded; })
     .catch(() => { /* The static poster and number readout work without 3D. */ });

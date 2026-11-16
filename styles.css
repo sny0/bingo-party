@@ -271,6 +271,33 @@ body.showing-draw { overflow:hidden; }
   25% { opacity:1; }
   to { opacity:0; scale:1.26; }
 }
+.confetti-layer {
+  position:absolute;
+  inset:0;
+  z-index:2;
+  container-type:size;
+  overflow:hidden;
+  pointer-events:none;
+}
+.confetti-layer span {
+  position:absolute;
+  left:var(--origin);
+  top:54%;
+  width:clamp(5px,1.2cqw,10px);
+  height:clamp(8px,2cqw,16px);
+  border-radius:1px;
+  background:var(--paper-color);
+  box-shadow:0 1px 1px #12081945;
+  animation:confetti-flight var(--time) var(--delay) linear both;
+}
+.confetti-layer span:nth-child(3n) { height:clamp(4px,.85cqw,7px); }
+@keyframes confetti-flight {
+  from { opacity:0; transform:translate3d(0,0,0) rotateZ(0) rotateY(0) scale(.65); }
+  9% { opacity:1; }
+  37% { transform:translate3d(calc(var(--drift) * .70),var(--rise),0) rotateZ(calc(var(--turn) * .50)) rotateY(140deg); }
+  77% { opacity:1; }
+  to { opacity:0; transform:translate3d(var(--drift),var(--fall),0) rotateZ(var(--turn)) rotateY(450deg); }
+}
 .fallback-ball {
   position:absolute;
   top:50%;
@@ -293,7 +320,7 @@ body.showing-draw { overflow:hidden; }
 .fallback-ball strong { font-size:clamp(38px,12dvh,112px); line-height:1; }
 .is-finale:not(.has-machine-3d) .fallback-ball { display:grid; }
 @media(orientation:portrait) and (max-width:640px) { .draw-stage { padding:12px 9px; } }
-@media(prefers-reduced-motion:reduce) { .show-rails,.machine-view::after,.ball-burst { display:none; } }
+@media(prefers-reduced-motion:reduce) { .show-rails,.machine-view::after,.ball-burst,.confetti-layer { display:none; } }
 @keyframes dialog-enter { from { opacity:0; transform:translateY(12px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
 
 @media(max-width:1100px) {

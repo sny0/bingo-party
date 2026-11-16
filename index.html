@@ -8,11 +8,11 @@
   <title>ガラガラ BINGO NIGHT</title>
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=1.3.7">
+  <link rel="stylesheet" href="./styles.css?v=1.3.8">
   <script type="importmap">
     { "imports": { "three": "./vendor/three/build/three.module.min.js" } }
   </script>
-  <script type="module" src="./app.js?v=1.3.7"></script>
+  <script type="module" src="./app.js?v=1.3.8"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -98,9 +98,10 @@
     <section class="draw-stage" aria-label="ビンゴ抽選機">
       <div class="show-rails" aria-hidden="true"><span></span><span></span></div>
       <div class="machine-view" id="machine-view" aria-hidden="true">
-        <img class="machine-poster" src="./assets/garagara-poster.webp?v=1.3.7" alt="" width="804" height="603">
+        <img class="machine-poster" src="./assets/garagara-poster.webp?v=1.3.8" alt="" width="804" height="603">
         <div class="machine-canvas" id="machine-canvas"></div>
         <div class="ball-burst"></div>
+        <div class="confetti-layer" id="confetti-layer"></div>
         <div class="fallback-ball">
           <span id="fallback-letter"></span>
           <strong id="fallback-number"></strong>
