@@ -97,6 +97,7 @@ function mount({ saved, reduced = false, failDialog = false } = {}) {
   return {
     elements, stage, storage, tick, document,
     dispatch: (id, name, event = {}) => Promise.all((elements.get(id).listeners.get(name) ?? []).map(callback => callback(event))),
+    keydown: event => documentEvents.get('keydown')?.(event),
     snapshot: () => JSON.parse(storage.get('garagara-bingo-v1')),
     click: id => {
       const element = elements.get(id);
@@ -122,16 +123,21 @@ test('charge, launch and finale keep one saved draw and block repeated clicks', 
   assert.equal(app.elements.get('ball-number').textContent, '?', 'sound toggle must not expose the pending result');
   await app.tick(1600);
   assert.equal(app.stage.classList.contains('is-launching'), true);
-  assert.equal(app.elements.get('draw-caption').textContent, '玉が出ます');
+  assert.equal(app.elements.get('draw-dialog-heading').textContent, '玉が出ます');
   await app.tick(300);
   assert.equal(app.stage.classList.contains('is-finale'), true);
-  assert.equal(Number(app.elements.get('draw-readout-number').textContent), app.snapshot().drawn[0]);
+  assert.equal(Number(app.elements.get('fallback-number').textContent), app.snapshot().drawn[0]);
   assert.equal(app.elements.get('draw-button').disabled, true, 'finale still owns the draw lock');
   await app.click('draw-button');
   assert.equal(app.snapshot().drawn.length, 1);
 
-  await app.tick(1400);
+  await app.tick(3000);
+  assert.equal(app.elements.get('draw-dialog').open, true, 'the host decides when to close the result');
+  assert.equal(app.elements.get('skip-label').textContent, '閉じる');
+  let prevented = false;
+  app.keydown({ key: 'Enter', preventDefault() { prevented = true; } });
   await completion;
+  assert.equal(prevented, true);
   assert.equal(app.elements.get('draw-button').disabled, false);
   assert.equal(app.elements.get('settings-button').disabled, false);
   assert.equal(app.stage.classList.contains('is-finale'), false);
@@ -151,13 +157,17 @@ test('reloading mid-show restores the committed number without replay or loss', 
   assert.equal(restored.elements.get('draw-dialog').open, false);
   assert.equal(restored.elements.get('draw-button').disabled, false);
   await first.tick(3500);
+  await first.click('skip-effects');
   await completion;
 });
 
-test('reduced motion finishes promptly with the saved result', async () => {
+test('reduced motion shows the saved result promptly and leaves it visible', async () => {
   const app = mount({ reduced: true });
   const completion = app.click('draw-button');
   await app.tick(400);
+  assert.equal(app.elements.get('draw-dialog').open, true);
+  assert.equal(Number(app.elements.get('fallback-number').textContent), app.snapshot().drawn[0]);
+  await app.click('skip-effects');
   await completion;
   assert.equal(app.snapshot().drawn.length, 1);
   assert.equal(app.elements.get('draw-button').disabled, false);
@@ -168,11 +178,11 @@ test('the second draw clears the previous number before revealing a new result',
   const app = mount();
   for (let round = 0; round < 3; round++) {
     const completion = app.click('draw-button');
-    assert.equal(app.elements.get('draw-readout-number').textContent, '');
+    assert.equal(app.elements.get('fallback-number').textContent, '');
     assert.equal(app.stage.classList.contains('has-machine-3d'), false, 'no WebGL uses the static picture');
     await app.tick(1900);
-    assert.equal(Number(app.elements.get('draw-readout-number').textContent), app.snapshot().drawn[round]);
-    await app.tick(1400);
+    assert.equal(Number(app.elements.get('fallback-number').textContent), app.snapshot().drawn[round]);
+    await app.click('skip-effects');
     await completion;
   }
   assert.equal(new Set(app.snapshot().drawn).size, 3);
@@ -185,8 +195,8 @@ test('the seventy-fifth result gets its finale and leaves the completed game dis
   const completion = app.click('draw-button');
   await app.tick(1900);
   assert.equal(app.stage.classList.contains('is-finale'), true);
-  assert.equal(Number(app.elements.get('draw-readout-number').textContent), 75);
-  await app.tick(1400);
+  assert.equal(Number(app.elements.get('fallback-number').textContent), 75);
+  await app.click('skip-effects');
   await completion;
   assert.equal(app.elements.get('draw-button').disabled, true);
   assert.equal(Number(app.elements.get('remaining-count').textContent), 0);
@@ -230,6 +240,23 @@ test('Escape skips the show without canceling the selected number', async () => 
   assert.equal(app.elements.get('draw-dialog').open, false);
   assert.equal(app.snapshot().drawn.length, 1);
   assert.equal(app.elements.get('draw-button').disabled, false);
+});
+
+test('Enter skips an active show and holding the key does not start another draw', async () => {
+  const app = mount();
+  const completion = app.click('draw-button');
+  let prevented = false;
+  const event = { key: 'Enter', preventDefault() { prevented = true; } };
+  app.keydown(event);
+  await completion;
+  assert.equal(prevented, true);
+  assert.equal(app.elements.get('draw-dialog').open, false);
+  assert.equal(Number(app.elements.get('ball-number').textContent), app.snapshot().drawn[0]);
+
+  prevented = false;
+  app.keydown({ ...event, repeat: true, target: app.document.activeElement });
+  assert.equal(prevented, true);
+  assert.equal(app.snapshot().drawn.length, 1);
 });
 
 test('closing the dialog externally also settles the pending result', async () => {

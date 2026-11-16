@@ -2,7 +2,7 @@ import { TOTAL, newGame, decodeGame, chooseNumber, commitDraw, bingoLetter, clea
 
 const STORAGE_KEY = 'garagara-bingo-v1';
 const $ = id => document.getElementById(id);
-const ui = Object.fromEntries(['sound-button','fullscreen-button','settings-button','settings-dialog','settings-form','settings-message','title-input','duration-input','volume-input','volume-output','event-title','draw-button','draw-button-text','draw-status','result-kicker','result-ball','ball-letter','ball-number','drawn-count','remaining-count','number-board','recent-numbers','save-status','export-button','import-button','import-input','reset-button','confirm-dialog','confirm-heading','confirm-description','confirm-kicker','confirm-ok','confirm-cancel','toast','machine-canvas','draw-round','draw-caption','draw-readout-letter','draw-readout-number','draw-dialog','draw-dialog-heading','dialog-status','skip-effects','draw-sound-button'].map(id => [id.replaceAll('-', '_'), $(id)]));
+const ui = Object.fromEntries(['sound-button','fullscreen-button','settings-button','settings-dialog','settings-form','settings-message','title-input','duration-input','volume-input','volume-output','event-title','draw-button','draw-button-text','draw-status','result-kicker','result-ball','ball-letter','ball-number','drawn-count','remaining-count','number-board','recent-numbers','save-status','export-button','import-button','import-input','reset-button','confirm-dialog','confirm-heading','confirm-description','confirm-kicker','confirm-ok','confirm-cancel','toast','machine-canvas','fallback-letter','fallback-number','skip-label','draw-dialog','draw-dialog-heading','dialog-status','skip-effects','draw-sound-button'].map(id => [id.replaceAll('-', '_'), $(id)]));
 const stage = document.querySelector('.draw-stage');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let game = newGame();
@@ -229,6 +229,7 @@ function revealSound() {
   const now = audio.currentTime;
   sweep(117, 54, now, 0.16, 0.22, 'triangle');
   tone(520, now, 0.08, 0.11, 'triangle');
+  sweep(480, 1450, now + 0.05, 0.20, 0.073, 'triangle');
   for (const [beat, frequency] of [523.25, 659.25, 783.99, 1046.5].entries()) {
     const start = now + 0.08 + beat * 0.065;
     tone(frequency, start, 0.24, 0.10, 'triangle');
@@ -243,13 +244,14 @@ function clearShowEffects() {
 
 function startMachine(spinDuration, number) {
   clearShowEffects();
-  ui.draw_round.textContent = '第' + game.drawn.length + '球';
-  ui.draw_caption.textContent = '抽選中';
-  ui.draw_readout_letter.textContent = '';
-  ui.draw_readout_number.textContent = '';
+  ui.skip_label.textContent = '演出をスキップ';
+  ui.fallback_letter.textContent = '';
+  ui.fallback_number.textContent = '';
+  const letter = bingoLetter(number);
+  stage.setAttribute('data-ball-letter', letter);
   stage.style.setProperty('--spin-time', spinDuration + 'ms');
   stage.classList.add('is-drawing');
-  if (!reduceMotion.matches && machine?.start(number, spinDuration)) {
+  if (!reduceMotion.matches && machine?.start(number, letter, spinDuration)) {
     stage.classList.add('has-machine-3d');
   }
 }
@@ -257,7 +259,7 @@ function startMachine(spinDuration, number) {
 function launchEffects(fallDuration) {
   if (stage.classList.contains('has-machine-3d')) machine?.release(fallDuration);
   stage.classList.add('is-launching');
-  ui.draw_caption.textContent = '玉が出ます';
+  ui.draw_dialog_heading.textContent = '玉が出ます';
   ui.dialog_status.textContent = '玉が出ます。';
   releaseSound();
 }
@@ -267,10 +269,12 @@ function revealEffects(number) {
   stage.classList.remove('is-drawing', 'is-launching');
   stage.classList.add('is-finale');
   render();
-  ui.draw_readout_number.textContent = number;
-  ui.draw_readout_letter.textContent = bingoLetter(number);
+  const letter = bingoLetter(number);
+  ui.fallback_number.textContent = number;
+  ui.fallback_letter.textContent = letter;
   ui.draw_dialog_heading.textContent = '抽選結果';
-  ui.dialog_status.textContent = bingoLetter(number) + 'の' + number + '番が出ました。';
+  ui.dialog_status.textContent = letter + 'の' + number + '番が出ました。';
+  ui.skip_label.textContent = '閉じる';
   if (!reduceMotion.matches) revealSound();
 }
 
@@ -296,7 +300,7 @@ const waitForShow = milliseconds => new Promise(resolve => {
     resolve();
   };
   showWaiter = finish;
-  timer = setTimeout(finish, milliseconds);
+  if (milliseconds !== undefined) timer = setTimeout(finish, milliseconds);
   if (skipRequested) finish();
 });
 
@@ -338,7 +342,7 @@ async function runDraw() {
     await waitForShow(fallDuration);
     if (skipRequested) return;
     revealEffects(number);
-    if (!reduceMotion.matches) await waitForShow(1300);
+    await waitForShow();
   } finally {
     showWaiter?.();
     showWaiter = null;
@@ -402,7 +406,17 @@ ui.draw_dialog.addEventListener('close', () => {
   if (busy && !ui.draw_dialog.open) skipDrawShow();
 });
 document.addEventListener('keydown', event => {
-  if (event.code !== 'Space' || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
+  if (event.isComposing || event.ctrlKey || event.altKey || event.metaKey) return;
+  if (event.key === 'Enter') {
+    if (ui.draw_dialog.open) {
+      event.preventDefault();
+      if (!event.repeat) skipDrawShow();
+    } else if (event.repeat && (event.target === ui.draw_button || event.target === ui.export_button)) {
+      event.preventDefault();
+    }
+    return;
+  }
+  if (event.code !== 'Space' || event.repeat) return;
   if (document.querySelector('dialog[open]')) return;
   if (event.target.closest('button,input,select,textarea,a,[contenteditable]')) return;
   event.preventDefault();
@@ -501,7 +515,7 @@ readSaved();
 createBoard();
 render();
 if ('WebGL2RenderingContext' in window && !reduceMotion.matches) {
-  import('./src/machine.js?v=1.3.5')
+  import('./src/machine.js?v=1.3.7')
     .then(({ createMachine }) => createMachine(ui.machine_canvas, () => stage.classList.remove('has-machine-3d')))
     .then(loaded => { machine = loaded; })
     .catch(() => { /* The static poster and number readout work without 3D. */ });
