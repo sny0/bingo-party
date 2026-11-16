@@ -1,6 +1,6 @@
 {
   "name": "garagara-bingo-night",
-  "version": "1.3.10",
+  "version": "1.3.11",
   "private": true,
   "type": "module",
   "description": "忘年会のためのガラガラ抽選機つきビンゴ",

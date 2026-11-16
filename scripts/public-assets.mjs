@@ -1,5 +1,5 @@
 export const publicAssets = [
-  'index.html', 'styles.css', 'app.js', 'src/bingo.js', 'src/machine.js',
+  'index.html', 'styles.css', 'app.js', 'src/bingo.js', 'src/machine.js', 'src/show-audio.js',
   'icon.svg', 'manifest.webmanifest', 'assets/garagara.glb', 'assets/garagara-poster.webp',
   'vendor/three/LICENSE', 'vendor/three/build/three.module.min.js', 'vendor/three/build/three.core.min.js',
   'vendor/three/examples/jsm/environments/RoomEnvironment.js',

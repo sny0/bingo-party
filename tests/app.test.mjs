@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import * as bingo from '../src/bingo.js';
+import { createShowAudio } from '../src/show-audio.js';
 
-const source = (await readFile(new URL('../app.js', import.meta.url), 'utf8')).replace(/^import[^\n]*\n/, '');
+const source = (await readFile(new URL('../app.js', import.meta.url), 'utf8')).replace(/^import[^\n]*\n/gm, '');
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 
 // Exercise real app events and the persisted game with a deterministic clock.
@@ -72,7 +73,7 @@ function mount({ saved, reduced = false, failDialog = false } = {}) {
     addEventListener: (name, callback) => documentEvents.set(name, callback),
   };
   const context = vm.createContext({
-    ...bingo, document, console,
+    ...bingo, createShowAudio, document, console,
     window: { addEventListener() {} },
     navigator: { locks: { request: async (_name, _options, callback) => callback({}) } },
     location: { protocol: 'http:' },

@@ -1,4 +1,5 @@
 import { TOTAL, newGame, decodeGame, chooseNumber, commitDraw, bingoLetter, cleanSettings } from './src/bingo.js';
+import { createShowAudio } from './src/show-audio.js?v=1.3.11';
 
 const STORAGE_KEY = 'garagara-bingo-v1';
 const $ = id => document.getElementById(id);
@@ -8,15 +9,13 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let game = newGame();
 let busy = false;
 let persistent = true;
-let audio;
-let audioMaster;
+const showAudio = createShowAudio(window.AudioContext || window.webkitAudioContext);
 let toastTimer;
 let confirmationAction = null;
 let storageWarning = false;
 let machine;
 let showWaiter = null;
 let skipRequested = false;
-const soundSources = new Set();
 
 function notify(message) {
   ui.toast.textContent = message;
@@ -127,118 +126,6 @@ function render() {
   updateSaveStatus();
 }
 
-function syncAudio() {
-  if (audio && audioMaster) {
-    audioMaster.gain.setTargetAtTime(game.settings.sound ? game.settings.volume * 0.6 : 0, audio.currentTime, 0.02);
-  }
-}
-
-function unlockAudio() {
-  if (!game.settings.sound || !game.settings.volume) return;
-  try {
-    if (!audio) {
-      const Audio = window.AudioContext || window.webkitAudioContext;
-      if (!Audio) return;
-      audio = new Audio();
-      audioMaster = audio.createGain();
-      const compressor = audio.createDynamicsCompressor();
-      compressor.threshold.value = -18;
-      compressor.knee.value = 18;
-      compressor.ratio.value = 5;
-      compressor.attack.value = 0.004;
-      compressor.release.value = 0.2;
-      audioMaster.connect(compressor);
-      compressor.connect(audio.destination);
-    }
-    syncAudio();
-    if (audio.state === 'suspended') audio.resume().catch(() => {});
-  } catch {
-    audio = null;
-    audioMaster = null;
-  }
-}
-
-function tone(frequency, start, length, gain = 0.15, type = 'sine') {
-  if (!audio || !audioMaster || !game.settings.sound || !game.settings.volume) return;
-  try {
-    const oscillator = audio.createOscillator();
-    const envelope = audio.createGain();
-    oscillator.type = type;
-    oscillator.frequency.setValueAtTime(frequency, start);
-    envelope.gain.setValueAtTime(0.001, start);
-    envelope.gain.exponentialRampToValueAtTime(gain, start + 0.006);
-    envelope.gain.exponentialRampToValueAtTime(0.001, start + length);
-    oscillator.connect(envelope);
-    envelope.connect(audioMaster);
-    soundSources.add(oscillator);
-    oscillator.start(start);
-    oscillator.stop(start + length + 0.01);
-    oscillator.onended = () => { soundSources.delete(oscillator); oscillator.disconnect(); envelope.disconnect(); };
-  } catch { /* Audio is optional; the draw must finish even if it is unavailable. */ }
-}
-
-function sweep(from, to, start, length, gain = 0.12, type = 'sawtooth') {
-  if (!audio || !audioMaster || !game.settings.sound || !game.settings.volume) return;
-  try {
-    const oscillator = audio.createOscillator();
-    const envelope = audio.createGain();
-    const filter = audio.createBiquadFilter();
-    oscillator.type = type;
-    oscillator.frequency.setValueAtTime(from, start);
-    oscillator.frequency.exponentialRampToValueAtTime(to, start + length);
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(2400, start);
-    envelope.gain.setValueAtTime(0.001, start);
-    envelope.gain.exponentialRampToValueAtTime(gain, start + Math.min(0.08, length / 4));
-    envelope.gain.exponentialRampToValueAtTime(0.001, start + length);
-    oscillator.connect(filter);
-    filter.connect(envelope);
-    envelope.connect(audioMaster);
-    soundSources.add(oscillator);
-    oscillator.start(start);
-    oscillator.stop(start + length + 0.02);
-    oscillator.onended = () => { soundSources.delete(oscillator); oscillator.disconnect(); filter.disconnect(); envelope.disconnect(); };
-  } catch { /* The draw continues when optional audio is unavailable. */ }
-}
-
-function rattle(duration) {
-  if (!audio) return;
-  const begin = audio.currentTime;
-  const seconds = duration / 1000;
-  let beat = 0;
-  for (let t = 0; t < seconds - 0.08;) {
-    const progress = t / seconds;
-    tone(210 + progress * 380, begin + t, 0.05, 0.13, 'triangle');
-    tone(1100 + progress * 1300, begin + t + 0.018, 0.035, 0.04, 'square');
-    if (beat++ % 3 === 0) tone([261.63, 329.63, 392, 523.25][beat % 4], begin + t, 0.13, 0.07, 'triangle');
-    t += 0.17 - progress * 0.115;
-  }
-  sweep(90, 650, begin, seconds, 0.08, 'triangle');
-  sweep(360, 1900, begin + seconds * 0.55, seconds * 0.43, 0.09);
-}
-
-function releaseSound() {
-  if (!audio || !game.settings.sound) return;
-  const now = audio.currentTime;
-  sweep(430, 1480, now, 0.19, 0.12, 'triangle');
-  tone(1240, now + 0.13, 0.09, 0.06);
-}
-
-function revealSound() {
-  if (!audio || !game.settings.sound) return;
-  const now = audio.currentTime;
-  tone(105, now, 0.12, 0.14, 'triangle');
-  tone(131, now + 0.12, 0.24, 0.12, 'triangle');
-  for (const frequency of [392, 493.88, 587.33]) {
-    tone(frequency, now, 0.095, 0.13, 'triangle');
-    tone(frequency * 2, now, 0.075, 0.025, 'sawtooth');
-  }
-  for (const frequency of [523.25, 659.25, 783.99]) {
-    tone(frequency, now + 0.12, 0.48, 0.14, 'triangle');
-    tone(frequency * 2, now + 0.12, 0.31, 0.032, 'sawtooth');
-  }
-}
-
 function launchConfetti() {
   const colors = ['#ffd267', '#fff3cc', '#f25378', '#51c8ed', '#58df9f', '#c09aff'];
   const columns = 8;
@@ -286,7 +173,7 @@ function launchEffects(fallDuration) {
   stage.classList.add('is-launching');
   ui.draw_dialog_heading.textContent = '玉が出ます';
   ui.dialog_status.textContent = '玉が出ます。';
-  releaseSound();
+  showAudio.drop(fallDuration);
 }
 
 function revealEffects(number) {
@@ -301,22 +188,15 @@ function revealEffects(number) {
   ui.dialog_status.textContent = letter + 'の' + number + '番が出ました。';
   ui.skip_label.textContent = '閉じる';
   if (!reduceMotion.matches) {
-    revealSound();
+    showAudio.reveal();
     launchConfetti();
   }
-}
-
-function stopShowAudio() {
-  for (const source of soundSources) {
-    try { source.stop(); } catch { /* The source may already have ended. */ }
-  }
-  soundSources.clear();
 }
 
 function skipDrawShow() {
   if (!busy) return;
   skipRequested = true;
-  stopShowAudio();
+  showAudio.stop();
   showWaiter?.();
 }
 
@@ -363,7 +243,7 @@ async function runDraw() {
     ui.draw_dialog.showModal();
     document.body.classList.add('showing-draw');
     startMachine(spinDuration, number);
-    if (!reduceMotion.matches) rattle(spinDuration);
+    if (!reduceMotion.matches) showAudio.spin(spinDuration);
     await waitForShow(spinDuration);
     if (skipRequested) return;
     if (!reduceMotion.matches) launchEffects(fallDuration);
@@ -375,7 +255,7 @@ async function runDraw() {
     showWaiter?.();
     showWaiter = null;
     clearShowEffects();
-    stopShowAudio();
+    showAudio.stop();
     busy = false;
     render();
     if (ui.draw_dialog.open) ui.draw_dialog.close();
@@ -387,7 +267,7 @@ async function runDraw() {
 
 async function draw() {
   if (busy || game.drawn.length === TOTAL) return;
-  unlockAudio(); // Must run directly within the tap/keypress on iPhone and iPad.
+  showAudio.prepare(game.settings); // Must run directly within the tap/keypress on iPhone and iPad.
   try {
     if (navigator.locks) {
       await navigator.locks.request('garagara-bingo-draw', { ifAvailable: true }, async lock => {
@@ -456,7 +336,7 @@ ui.settings_form.addEventListener('submit', event => {
   event.preventDefault();
   game.settings = cleanSettings({ ...game.settings, title: ui.title_input.value, duration: Number(ui.duration_input.value), volume: Number(ui.volume_input.value) / 100 });
   persist();
-  syncAudio();
+  showAudio.update(game.settings);
   render();
   ui.settings_dialog.close();
   notify('設定を保存しました。');
@@ -465,10 +345,10 @@ ui.volume_input.addEventListener('input', () => { ui.volume_output.value = ui.vo
 function toggleSound() {
   game.settings.sound = !game.settings.sound;
   persist();
-  syncAudio();
+  showAudio.update(game.settings);
   // Keep the drawing state and its hidden result unchanged when sound is toggled mid-animation.
   updateSoundButtons();
-  if (game.settings.sound) { unlockAudio(); tone(659.25, audio?.currentTime ?? 0, 0.15, 0.1); }
+  if (game.settings.sound) { showAudio.prepare(game.settings); showAudio.preview(); }
 }
 ui.sound_button.addEventListener('click', toggleSound);
 ui.draw_sound_button.addEventListener('click', toggleSound);
@@ -510,7 +390,7 @@ ui.import_input.addEventListener('change', async () => {
       description: 'このブラウザの履歴を、ファイルに保存された' + imported.drawn.length + '球分の履歴に置き換えます。',
       button: '履歴を読み込む',
       kicker: '履歴の読み込み',
-      action: () => { game = imported; persist(); syncAudio(); render(); notify('履歴を読み込みました。'); },
+      action: () => { game = imported; persist(); showAudio.update(game.settings); render(); notify('履歴を読み込みました。'); },
     });
   } catch (error) {
     ui.settings_message.textContent = error instanceof SyntaxError ? 'ファイルを読み取れません。「履歴を保存」でダウンロードしたファイルを選んでください。' : error.message;
@@ -536,14 +416,14 @@ ui.confirm_dialog.addEventListener('cancel', () => { confirmationAction = null; 
 
 window.addEventListener('storage', event => {
   if (event.key !== STORAGE_KEY || busy || !event.newValue) return;
-  try { game = decodeGame(event.newValue); syncAudio(); render(); } catch { /* Ignore invalid writes from outside the app. */ }
+  try { game = decodeGame(event.newValue); showAudio.update(game.settings); render(); } catch { /* Ignore invalid writes from outside the app. */ }
 });
 
 readSaved();
 createBoard();
 render();
 if ('WebGL2RenderingContext' in window && !reduceMotion.matches) {
-  import('./src/machine.js?v=1.3.10')
+  import('./src/machine.js?v=1.3.11')
     .then(({ createMachine }) => createMachine(ui.machine_canvas, () => stage.classList.remove('has-machine-3d')))
     .then(loaded => { machine = loaded; })
     .catch(() => { /* The static poster and number readout work without 3D. */ });
