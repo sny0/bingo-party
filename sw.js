@@ -1,5 +1,13 @@
-const CACHE = 'garagara-bingo-v1.2.0';
-const ASSETS = ['./', './index.html', './styles.css?v=1.2.0', './app.js?v=1.2.0', './src/bingo.js', './icon.svg', './manifest.webmanifest'];
+const CACHE = 'garagara-bingo-v1.3.5';
+const ASSETS = [
+  './', './index.html', './styles.css?v=1.3.5', './app.js?v=1.3.5', './src/bingo.js', './src/machine.js?v=1.3.5',
+  './icon.svg', './manifest.webmanifest', './assets/garagara.glb?v=1.3.5', './assets/garagara-poster.webp?v=1.3.5',
+  './vendor/three/LICENSE', './vendor/three/build/three.module.min.js', './vendor/three/build/three.core.min.js',
+  './vendor/three/examples/jsm/environments/RoomEnvironment.js',
+  './vendor/three/examples/jsm/loaders/GLTFLoader.js',
+  './vendor/three/examples/jsm/utils/BufferGeometryUtils.js',
+  './vendor/three/examples/jsm/utils/SkeletonUtils.js',
+];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
 });

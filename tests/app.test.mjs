@@ -9,11 +9,10 @@ const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 
 // Exercise real app events and the persisted game with a deterministic clock.
 // This harness checks state transitions; it does not emulate CSS or browser layout.
-function mount({ saved, reduced = false, failAnimation = false, failDialog = false } = {}) {
+function mount({ saved, reduced = false, failDialog = false } = {}) {
   const elements = new Map();
   const storage = saved ?? new Map([['garagara-bingo-v1', JSON.stringify(bingo.newGame({ sound: false, duration: 1800 }))]]);
   const timers = new Map();
-  const animated = [];
   let now = 0;
   let timerId = 0;
 
@@ -45,12 +44,6 @@ function mount({ saved, reduced = false, failAnimation = false, failDialog = fal
     addEventListener(name, callback) {
       if (!this.listeners.has(name)) this.listeners.set(name, []);
       this.listeners.get(name).push(callback);
-    }
-    animate(frames, options) {
-      if (failAnimation) throw new Error('Animation API unavailable');
-      const animation = { frames, options, canceled: false, cancel() { this.canceled = true; } };
-      animated.push(animation);
-      return animation;
     }
     showModal() {
       if (failDialog && this.id === 'draw-dialog') throw new Error('Modal unavailable');
@@ -102,7 +95,7 @@ function mount({ saved, reduced = false, failAnimation = false, failDialog = fal
     throw new Error('Timer loop did not settle');
   }
   return {
-    elements, stage, storage, animated, tick, document,
+    elements, stage, storage, tick, document,
     dispatch: (id, name, event = {}) => Promise.all((elements.get(id).listeners.get(name) ?? []).map(callback => callback(event))),
     snapshot: () => JSON.parse(storage.get('garagara-bingo-v1')),
     click: id => {
@@ -129,10 +122,10 @@ test('charge, launch and finale keep one saved draw and block repeated clicks', 
   assert.equal(app.elements.get('ball-number').textContent, '?', 'sound toggle must not expose the pending result');
   await app.tick(1600);
   assert.equal(app.stage.classList.contains('is-launching'), true);
-  assert.equal(app.elements.get('fx-caption').textContent, '出た！');
+  assert.equal(app.elements.get('draw-caption').textContent, '玉が出ます');
   await app.tick(300);
   assert.equal(app.stage.classList.contains('is-finale'), true);
-  assert.equal(Number(app.elements.get('fx-number').textContent), app.snapshot().drawn[0]);
+  assert.equal(Number(app.elements.get('draw-readout-number').textContent), app.snapshot().drawn[0]);
   assert.equal(app.elements.get('draw-button').disabled, true, 'finale still owns the draw lock');
   await app.click('draw-button');
   assert.equal(app.snapshot().drawn.length, 1);
@@ -145,8 +138,6 @@ test('charge, launch and finale keep one saved draw and block repeated clicks', 
   assert.equal(app.elements.get('draw-dialog').open, false);
   assert.equal(app.document.activeElement, app.elements.get('draw-button'));
   assert.equal(app.document.body.classList.contains('showing-draw'), false);
-  assert.equal(app.elements.get('confetti-container').children.length, 0);
-  assert.ok(app.animated.every(animation => animation.canceled));
 });
 
 test('reloading mid-show restores the committed number without replay or loss', async () => {
@@ -163,41 +154,28 @@ test('reloading mid-show restores the committed number without replay or loss', 
   await completion;
 });
 
-test('reduced motion finishes promptly without a burst or animated machine', async () => {
+test('reduced motion finishes promptly with the saved result', async () => {
   const app = mount({ reduced: true });
   const completion = app.click('draw-button');
   await app.tick(400);
   await completion;
   assert.equal(app.snapshot().drawn.length, 1);
   assert.equal(app.elements.get('draw-button').disabled, false);
-  assert.equal(app.animated.length, 0);
-  assert.equal(app.stage.classList.contains('is-finale'), false);
-  assert.equal(app.elements.get('confetti-container').children.length, 0);
-});
-
-test('animation failure still reveals the saved result and releases the controls', async () => {
-  const app = mount({ failAnimation: true });
-  await app.click('draw-button');
-  assert.equal(app.snapshot().drawn.length, 1);
   assert.equal(Number(app.elements.get('ball-number').textContent), app.snapshot().drawn[0]);
-  assert.equal(app.elements.get('draw-button').disabled, false);
-  assert.equal(app.elements.get('settings-button').disabled, false);
-  assert.equal(app.stage.classList.contains('is-drawing'), false);
 });
 
-test('successive shows reuse their effect elements and clean up finished particles', async () => {
+test('the second draw clears the previous number before revealing a new result', async () => {
   const app = mount();
   for (let round = 0; round < 3; round++) {
     const completion = app.click('draw-button');
-    await app.tick(3500);
+    assert.equal(app.elements.get('draw-readout-number').textContent, '');
+    assert.equal(app.stage.classList.contains('has-machine-3d'), false, 'no WebGL uses the static picture');
+    await app.tick(1900);
+    assert.equal(Number(app.elements.get('draw-readout-number').textContent), app.snapshot().drawn[round]);
+    await app.tick(1400);
     await completion;
-    assert.equal(app.elements.get('fx-lights').children.length, 36);
-    assert.equal(app.elements.get('fx-sparks').children.length, 26);
-    assert.equal(app.elements.get('confetti-container').children.length, 0);
-    assert.equal(app.snapshot().drawn.length, round + 1);
   }
   assert.equal(new Set(app.snapshot().drawn).size, 3);
-  assert.ok(app.animated.every(animation => animation.canceled));
 });
 
 test('the seventy-fifth result gets its finale and leaves the completed game disabled', async () => {
@@ -207,7 +185,7 @@ test('the seventy-fifth result gets its finale and leaves the completed game dis
   const completion = app.click('draw-button');
   await app.tick(1900);
   assert.equal(app.stage.classList.contains('is-finale'), true);
-  assert.equal(Number(app.elements.get('fx-number').textContent), 75);
+  assert.equal(Number(app.elements.get('draw-readout-number').textContent), 75);
   await app.tick(1400);
   await completion;
   assert.equal(app.elements.get('draw-button').disabled, true);
@@ -231,7 +209,6 @@ test('skipping during any show phase returns to the board with exactly one resul
     assert.equal(app.document.body.classList.contains('showing-draw'), false);
     assert.equal(app.document.activeElement, app.elements.get('draw-button'));
     assert.equal(app.elements.get('draw-button').disabled, false);
-    assert.ok(app.animated.every(animation => animation.canceled));
 
     const next = app.click('draw-button');
     await app.tick(1900);

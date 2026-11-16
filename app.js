@@ -2,7 +2,7 @@ import { TOTAL, newGame, decodeGame, chooseNumber, commitDraw, bingoLetter, clea
 
 const STORAGE_KEY = 'garagara-bingo-v1';
 const $ = id => document.getElementById(id);
-const ui = Object.fromEntries(['sound-button','fullscreen-button','settings-button','settings-dialog','settings-form','settings-message','title-input','duration-input','volume-input','volume-output','event-title','stage-label','machine','draw-button','draw-button-text','draw-status','result-kicker','result-ball','ball-letter','ball-number','drawn-count','remaining-count','number-board','recent-numbers','save-status','export-button','import-button','import-input','reset-button','confirm-dialog','confirm-heading','confirm-description','confirm-kicker','confirm-ok','confirm-cancel','toast','confetti-container','exit-ball','exit-number','drum','crank','inside-balls','fx-sparks','fx-lights','fx-kicker','fx-caption','fx-letter','fx-number','fx-round','draw-dialog','draw-dialog-heading','dialog-status','skip-effects','draw-sound-button'].map(id => [id.replaceAll('-', '_'), $(id)]));
+const ui = Object.fromEntries(['sound-button','fullscreen-button','settings-button','settings-dialog','settings-form','settings-message','title-input','duration-input','volume-input','volume-output','event-title','draw-button','draw-button-text','draw-status','result-kicker','result-ball','ball-letter','ball-number','drawn-count','remaining-count','number-board','recent-numbers','save-status','export-button','import-button','import-input','reset-button','confirm-dialog','confirm-heading','confirm-description','confirm-kicker','confirm-ok','confirm-cancel','toast','machine-canvas','draw-round','draw-caption','draw-readout-letter','draw-readout-number','draw-dialog','draw-dialog-heading','dialog-status','skip-effects','draw-sound-button'].map(id => [id.replaceAll('-', '_'), $(id)]));
 const stage = document.querySelector('.draw-stage');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let game = newGame();
@@ -13,7 +13,7 @@ let audioMaster;
 let toastTimer;
 let confirmationAction = null;
 let storageWarning = false;
-let animations = [];
+let machine;
 let showWaiter = null;
 let skipRequested = false;
 const soundSources = new Set();
@@ -99,9 +99,7 @@ function render() {
   ui.ball_letter.textContent = bingoLetter(latest);
   ui.result_kicker.textContent = complete ? '抽選終了' : '今回の番号';
   ui.draw_status.textContent = complete ? '75個すべての番号が出ました。' : latest ? '第' + game.drawn.length + '球 · ' + bingoLetter(latest) + 'の' + latest + '番' : 'ボタンを押して抽選を始めてください。';
-  ui.stage_label.textContent = complete ? '抽選終了' : '抽選できます';
   ui.draw_button_text.textContent = complete ? '抽選は終了しました' : latest ? '次の番号を引く' : 'ガラガラを回す';
-  stage.classList.toggle('all-done', complete);
   ui.draw_button.disabled = busy || complete;
   ui.settings_button.disabled = busy;
   ui.export_button.disabled = busy || !game.drawn.length;
@@ -219,144 +217,61 @@ function rattle(duration) {
   sweep(360, 1900, begin + seconds * 0.55, seconds * 0.43, 0.09);
 }
 
-function launchSound() {
-  if (!audio) return;
-  const start = audio.currentTime;
-  sweep(1800, 170, start, 0.38, 0.24);
-  sweep(120, 38, start, 0.3, 0.38, 'sine');
-  [1046.5, 1567.98, 2093].forEach((frequency, i) => tone(frequency, start + i * 0.035, 0.4, 0.09));
+function releaseSound() {
+  if (!audio || !game.settings.sound) return;
+  const now = audio.currentTime;
+  sweep(430, 1480, now, 0.19, 0.12, 'triangle');
+  tone(1240, now + 0.13, 0.09, 0.06);
 }
 
-function chime() {
-  if (!audio) return;
-  const start = audio.currentTime;
-  sweep(140, 45, start, 0.38, 0.32, 'sine');
-  const melody = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5];
-  melody.forEach((note, i) => {
-    tone(note, start + i * 0.095, 0.42, 0.16, 'triangle');
-    tone(note * 2, start + i * 0.095, 0.3, 0.06);
-  });
-  [523.25, 659.25, 783.99, 1046.5].forEach(note => tone(note, start + 0.64, 0.6, 0.12));
-}
-
-function playAnimation(target, frames, options) {
-  if (!target.animate) return null;
-  const animation = target.animate(frames, options);
-  animations.push(animation);
-  return animation;
-}
-
-function createShowEffects() {
-  // Reuse a bounded set of decorative elements on every draw.
-  for (let i = 0; i < 36; i++) {
-    const light = document.createElement('i');
-    light.style.setProperty('--i', i);
-    if (i < 12) { light.style.left = (4 + i * 92 / 11) + '%'; light.style.top = '8px'; }
-    else if (i < 24) { light.style.left = (4 + (i - 12) * 92 / 11) + '%'; light.style.bottom = '8px'; }
-    else if (i < 30) { light.style.left = '8px'; light.style.top = (12 + (i - 24) * 76 / 5) + '%'; }
-    else { light.style.right = '8px'; light.style.top = (12 + (i - 30) * 76 / 5) + '%'; }
-    ui.fx_lights.append(light);
-  }
-  for (let i = 0; i < 26; i++) {
-    const spark = document.createElement('i');
-    spark.style.setProperty('--sx', Math.sin(i * 2.4) * (45 + i * 6) + 'px');
-    spark.style.setProperty('--sy', -(70 + (i % 7) * 32) + 'px');
-    spark.style.setProperty('--delay', -(i % 9) * 0.19 + 's');
-    spark.style.setProperty('--size', (3 + i % 4) + 'px');
-    ui.fx_sparks.append(spark);
+function revealSound() {
+  if (!audio || !game.settings.sound) return;
+  const now = audio.currentTime;
+  sweep(117, 54, now, 0.16, 0.22, 'triangle');
+  tone(520, now, 0.08, 0.11, 'triangle');
+  for (const [beat, frequency] of [523.25, 659.25, 783.99, 1046.5].entries()) {
+    const start = now + 0.08 + beat * 0.065;
+    tone(frequency, start, 0.24, 0.10, 'triangle');
+    tone(frequency * 2, start, 0.15, 0.032);
   }
 }
 
 function clearShowEffects() {
-  stage.classList.remove('is-drawing', 'is-launching', 'is-revealing', 'is-finale');
-  ui.confetti_container.replaceChildren();
-  animations.forEach(animation => animation.cancel());
-  animations = [];
+  machine?.stop();
+  stage.classList.remove('is-drawing', 'is-launching', 'is-finale', 'has-machine-3d');
 }
 
-function startMachine(duration, number) {
+function startMachine(spinDuration, number) {
   clearShowEffects();
-  const launchAt = duration * 0.7;
-  ui.exit_number.textContent = number;
-  ui.exit_ball.setAttribute('opacity', '0');
-  ui.fx_kicker.textContent = '';
-  ui.fx_caption.textContent = '抽選開始';
-  stage.style.setProperty('--charge-duration', launchAt + 'ms');
+  ui.draw_round.textContent = '第' + game.drawn.length + '球';
+  ui.draw_caption.textContent = '抽選中';
+  ui.draw_readout_letter.textContent = '';
+  ui.draw_readout_number.textContent = '';
+  stage.style.setProperty('--spin-time', spinDuration + 'ms');
   stage.classList.add('is-drawing');
-  if (!reduceMotion.matches) {
-    playAnimation(ui.drum, [
-      { transform: 'rotate(0deg)', offset: 0 },
-      { transform: 'rotate(50deg)', offset: 0.15 },
-      { transform: 'rotate(1330deg)', offset: 0.91 },
-      { transform: 'rotate(1440deg)', offset: 1 },
-    ], { duration: launchAt, easing: 'cubic-bezier(.46,.02,.34,1)', fill: 'forwards' });
-    playAnimation(ui.crank, [
-      { transform: 'rotate(0deg)' }, { transform: 'rotate(2160deg)' },
-    ], { duration: launchAt, easing: 'cubic-bezier(.46,.02,.34,1)', fill: 'forwards' });
-    playAnimation(ui.inside_balls, [
-      { transform: 'translate(0,0) rotate(0deg)' },
-      { transform: 'translate(7px,-48px) rotate(-45deg)' },
-      { transform: 'translate(-17px,-16px) rotate(30deg)' },
-      { transform: 'translate(14px,-38px) rotate(-24deg)' },
-      { transform: 'translate(0,0) rotate(0deg)' },
-    ], { duration: launchAt / 4, iterations: 4, easing: 'ease-in-out' });
-    playAnimation(ui.exit_ball, [
-      { transform: 'translate(328px,285px) scale(.35)', opacity: 0, offset: 0 },
-      { transform: 'translate(340px,282px) scale(1.6)', opacity: 1, offset: 0.13 },
-      { transform: 'translate(386px,305px) scale(1.3)', opacity: 1, offset: 0.4 },
-      { transform: 'translate(421px,314px) scale(1.12)', opacity: 1, offset: 0.6 },
-      { transform: 'translate(460px,332px) scale(1)', opacity: 1, offset: 0.8 },
-      { transform: 'translate(460px,317px) scale(1)', opacity: 1, offset: 0.91 },
-      { transform: 'translate(460px,333px) scale(1)', opacity: 1, offset: 1 },
-    ], { duration: duration - launchAt, delay: launchAt, fill: 'forwards', easing: 'linear' });
+  if (!reduceMotion.matches && machine?.start(number, spinDuration)) {
+    stage.classList.add('has-machine-3d');
   }
 }
 
-function launchEffects() {
+function launchEffects(fallDuration) {
+  if (stage.classList.contains('has-machine-3d')) machine?.release(fallDuration);
   stage.classList.add('is-launching');
-  ui.fx_kicker.textContent = '';
-  ui.fx_caption.textContent = '出た！';
-  ui.stage_label.textContent = '番号が出ます';
-  ui.draw_status.textContent = '番号が出ます。';
+  ui.draw_caption.textContent = '玉が出ます';
   ui.dialog_status.textContent = '玉が出ます。';
-  launchSound();
-}
-
-function confetti() {
-  if (reduceMotion.matches) return;
-  ui.confetti_container.replaceChildren();
-  const colors = ['#ffdc69', '#fff5c1', '#eabc4a', '#ff788b', '#7ee9df', '#d4a4ff'];
-  for (let i = 0; i < 64; i++) {
-    const piece = document.createElement('i');
-    piece.className = 'confetti';
-    piece.style.background = colors[i % colors.length];
-    piece.style.setProperty('--x', Math.sin(i * 2.4) * (90 + i * 5) + 'px');
-    piece.style.setProperty('--y', (80 + (i % 11) * 39) + 'px');
-    piece.style.setProperty('--r', (i % 2 ? 1 : -1) * (160 + i * 31) + 'deg');
-    piece.style.animationDelay = (i % 4) * 0.025 + 's';
-    ui.confetti_container.append(piece);
-  }
+  releaseSound();
 }
 
 function revealEffects(number) {
-  animations.forEach(animation => animation.cancel());
-  animations = [];
-  ui.exit_ball.setAttribute('opacity', '1');
-  ui.exit_ball.setAttribute('transform', 'translate(460 333)');
+  if (stage.classList.contains('has-machine-3d')) machine?.land();
   stage.classList.remove('is-drawing', 'is-launching');
+  stage.classList.add('is-finale');
   render();
-  ui.fx_number.textContent = number;
-  ui.fx_letter.textContent = bingoLetter(number);
-  ui.fx_round.textContent = '第' + game.drawn.length + '球';
+  ui.draw_readout_number.textContent = number;
+  ui.draw_readout_letter.textContent = bingoLetter(number);
   ui.draw_dialog_heading.textContent = '抽選結果';
-  ui.dialog_status.textContent = '第' + game.drawn.length + '球 · ' + bingoLetter(number) + 'の' + number + '番';
-  stage.classList.add('is-revealing');
-  if (!reduceMotion.matches) {
-    stage.classList.add('is-finale');
-    ui.draw_button_text.textContent = '番号を表示しています';
-  }
-  chime();
-  confetti();
+  ui.dialog_status.textContent = bingoLetter(number) + 'の' + number + '番が出ました。';
+  if (!reduceMotion.matches) revealSound();
 }
 
 function stopShowAudio() {
@@ -407,19 +322,20 @@ async function runDraw() {
   ui.draw_status.textContent = '抽選機を回しています。';
   ui.result_ball.setAttribute('aria-label', '抽選中');
   ui.ball_number.textContent = previous ?? '?';
-  ui.stage_label.textContent = '抽選中';
   ui.draw_dialog_heading.textContent = '抽選中';
   ui.dialog_status.textContent = '抽選機を回しています。';
   const duration = reduceMotion.matches ? 350 : game.settings.duration;
+  const spinDuration = duration * 0.7;
+  const fallDuration = duration - spinDuration;
   try {
     ui.draw_dialog.showModal();
     document.body.classList.add('showing-draw');
-    startMachine(duration, number);
-    if (!reduceMotion.matches) rattle(duration * 0.7);
-    await waitForShow(duration * 0.7);
+    startMachine(spinDuration, number);
+    if (!reduceMotion.matches) rattle(spinDuration);
+    await waitForShow(spinDuration);
     if (skipRequested) return;
-    if (!reduceMotion.matches) launchEffects();
-    await waitForShow(duration * 0.3);
+    if (!reduceMotion.matches) launchEffects(fallDuration);
+    await waitForShow(fallDuration);
     if (skipRequested) return;
     revealEffects(number);
     if (!reduceMotion.matches) await waitForShow(1300);
@@ -428,8 +344,6 @@ async function runDraw() {
     showWaiter = null;
     clearShowEffects();
     stopShowAudio();
-    ui.exit_ball.setAttribute('opacity', '1');
-    ui.exit_ball.setAttribute('transform', 'translate(460 333)');
     busy = false;
     render();
     if (ui.draw_dialog.open) ui.draw_dialog.close();
@@ -554,7 +468,7 @@ ui.import_input.addEventListener('change', async () => {
       description: 'このブラウザの履歴を、ファイルに保存された' + imported.drawn.length + '球分の履歴に置き換えます。',
       button: '履歴を読み込む',
       kicker: '履歴の読み込み',
-      action: () => { game = imported; persist(); syncAudio(); render(); ui.exit_ball.setAttribute('opacity', '0'); notify('履歴を読み込みました。'); },
+      action: () => { game = imported; persist(); syncAudio(); render(); notify('履歴を読み込みました。'); },
     });
   } catch (error) {
     ui.settings_message.textContent = error instanceof SyntaxError ? 'ファイルを読み取れません。「履歴を保存」でダウンロードしたファイルを選んでください。' : error.message;
@@ -566,7 +480,7 @@ ui.reset_button.addEventListener('click', () => {
     title: '新しいゲームを始めますか？',
     description: '現在の履歴を消して、最初から引き直します。残しておきたい履歴は、先にファイルへ保存してください。',
     button: '新しく始める',
-    action: () => { game = newGame(game.settings); persist(); render(); stage.classList.remove('is-revealing'); ui.exit_ball.setAttribute('opacity', '0'); ui.confetti_container.replaceChildren(); notify('履歴を消して、新しいゲームを始めました。'); },
+    action: () => { game = newGame(game.settings); persist(); render(); notify('履歴を消して、新しいゲームを始めました。'); },
   });
 });
 ui.confirm_cancel.addEventListener('click', () => { confirmationAction = null; ui.confirm_dialog.close(); });
@@ -585,8 +499,13 @@ window.addEventListener('storage', event => {
 
 readSaved();
 createBoard();
-createShowEffects();
 render();
+if ('WebGL2RenderingContext' in window && !reduceMotion.matches) {
+  import('./src/machine.js?v=1.3.5')
+    .then(({ createMachine }) => createMachine(ui.machine_canvas, () => stage.classList.remove('has-machine-3d')))
+    .then(loaded => { machine = loaded; })
+    .catch(() => { /* The static poster and number readout work without 3D. */ });
+}
 if (storageWarning) notify('このブラウザの履歴を復元できませんでした。保存済みの履歴ファイルは、設定画面から読み込めます。');
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));

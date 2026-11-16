@@ -2,10 +2,11 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { publicAssets } from './public-assets.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const allowed = new Set(['index.html','styles.css','app.js','src/bingo.js','icon.svg','manifest.webmanifest','sw.js']);
-const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
+const allowed = new Set([...publicAssets, 'sw.js']);
+const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json', '.glb': 'model/gltf-binary', '.webp': 'image/webp' };
 const port = Number(process.env.PORT || 4173);
 createServer(async (request, response) => {
   try {
