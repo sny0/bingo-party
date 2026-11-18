@@ -8,11 +8,11 @@
   <title>ガラガラ BINGO NIGHT</title>
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=1.5.0">
+  <link rel="stylesheet" href="./styles.css?v=1.6.0">
   <script type="importmap">
     { "imports": { "three": "./vendor/three/build/three.module.min.js" } }
   </script>
-  <script type="module" src="./app.js?v=1.5.0"></script>
+  <script type="module" src="./app.js?v=1.6.0"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -25,6 +25,7 @@
         <h1 id="event-title">忘年会ビンゴ</h1>
       </div>
       <div class="header-tools">
+        <button class="bingo-button" id="bingo-button" type="button" aria-keyshortcuts="B" title="ビンゴを祝う（Bキー）">BINGO!</button>
         <button class="icon-button" id="sound-button" type="button" aria-label="効果音をオフにする" aria-pressed="true" title="効果音">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-muted" d="m16 9 5 6m0-6-5 6"/></svg>
         </button>
@@ -88,6 +89,7 @@
     <div class="draw-dialog-heading">
       <h2 id="draw-dialog-heading">抽選中</h2>
       <div class="header-tools">
+        <button class="bingo-button" id="result-bingo-button" type="button" aria-keyshortcuts="B" title="ビンゴを祝う（Bキー）" disabled>BINGO!</button>
         <button class="icon-button" id="draw-sound-button" type="button" aria-label="効果音をオフにする" aria-pressed="true" title="効果音">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-muted" d="m16 9 5 6m0-6-5 6"/></svg>
         </button>
@@ -97,17 +99,22 @@
     <section class="draw-stage" aria-label="ビンゴ抽選機">
       <div class="show-rails" aria-hidden="true"><span></span><span></span></div>
       <div class="machine-view" id="machine-view" aria-hidden="true">
-        <img class="machine-poster" src="./assets/garagara-poster.webp?v=1.5.0" alt="" width="804" height="603">
+        <img class="machine-poster" src="./assets/garagara-poster.webp?v=1.6.0" alt="" width="804" height="603">
         <div class="machine-canvas" id="machine-canvas"></div>
-        <div class="ball-burst"></div>
-        <div class="fallback-ball">
-          <span id="fallback-letter"></span>
-          <strong id="fallback-number"></strong>
-        </div>
+      </div>
+      <div class="stage-readout" aria-hidden="true">
+        <span class="stage-letter" id="fallback-letter"></span>
+        <strong class="stage-number" id="fallback-number"></strong>
       </div>
     </section>
     <div class="confetti-layer" id="confetti-layer" aria-hidden="true"></div>
     <p class="dialog-status" id="dialog-status" role="status" aria-live="polite" aria-atomic="true">抽選機を回しています。</p>
+  </dialog>
+
+  <dialog class="celebration" id="bingo-dialog" aria-labelledby="bingo-heading">
+    <button class="skip-button" id="close-bingo" type="button" autofocus>閉じる <kbd>Enter</kbd></button>
+    <h2 id="bingo-heading">BINGO!</h2>
+    <div class="confetti-layer" id="bingo-confetti" aria-hidden="true"></div>
   </dialog>
 
   <dialog class="settings-dialog" id="settings-dialog" aria-labelledby="settings-heading">
@@ -115,8 +122,8 @@
     <form id="settings-form">
       <label class="field-label" for="title-input">イベント名</label>
       <input id="title-input" name="title" type="text" maxlength="36" autocomplete="off" placeholder="忘年会ビンゴ">
-      <label class="field-label" for="duration-input">抽選の長さ</label>
-      <select id="duration-input" name="duration"><option value="1800">短め · 約2秒</option><option value="3400">標準 · 約3秒</option><option value="5200">長め · 約5秒</option></select>
+      <label class="field-label" for="duration-input">ガラガラの回転・落下時間</label>
+      <select id="duration-input" name="duration"></select>
       <label class="field-label volume-label" for="volume-input">効果音の音量 <output id="volume-output" for="volume-input">40%</output></label>
       <input id="volume-input" name="volume" type="range" min="0" max="100" step="5" value="40">
       <p class="settings-note">抽選結果はこのブラウザに保存されます。別の端末で続きを引くときは、履歴をファイルに保存し、その端末で読み込んでください。</p>

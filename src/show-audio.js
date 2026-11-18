@@ -131,6 +131,14 @@ export function createShowAudio(AudioContext) {
 
   function reveal() {
     cue(now => {
+      note(now, 0.34, 0.58, 'triangle', 175, { to: 62, cutoff: 1900, endCutoff: 370 });
+      note(now, 0.26, 0.22, 'brass', 196, { cutoff: 1400, endCutoff: 330 });
+      burst(now, 0.075, 0.29, 2100, 900);
+    });
+  }
+
+  function celebrate() {
+    cue(now => {
       const hit = (at, notes, bass, length, level) => {
         note(at, length * 0.60, level * 0.80, 'triangle', bass * 1.8, { to: bass, cutoff: 2200, endCutoff: 580 });
         burst(at, length * 0.58, level * 1.12, 3700, 1400, { type: 'highpass' });
@@ -140,7 +148,7 @@ export function createShowAudio(AudioContext) {
           note(at, length, level * 0.15, 'brass', hz, { ...shape, detune: i % 2 ? -8 : 8 });
         }
       };
-      // A short pickup, then the bigger resolving chord: "pa-PAAAN".
+      // Brass pickup and a longer cadence for a host-announced bingo.
       hit(now, [246.94, 293.66, 392], 85, 0.115, 0.48);
       const finale = now + 0.125;
       hit(finale, [261.63, 329.63, 523.25], 108, 0.61, 0.61);
@@ -148,6 +156,8 @@ export function createShowAudio(AudioContext) {
       [1318.51, 1567.98, 2093.0, 1567.98, 1046.5].forEach((pitch, i) => {
         note(finale + 0.08 + i * 0.05, 0.19, 0.11 - i * 0.011, 'sine', pitch);
       });
+      hit(now + 0.66, [293.66, 392, 587.33], 98, 0.15, 0.45);
+      hit(now + 0.84, [329.63, 523.25, 659.25], 130.81, 0.90, 0.60);
     });
   }
 
@@ -158,5 +168,5 @@ export function createShowAudio(AudioContext) {
     active.clear();
   }
 
-  return { prepare, update, spin, drop, reveal, stop, preview: () => cue(now => note(now, 0.14, 0.16, 'triangle', 659.25)) };
+  return { prepare, update, spin, drop, reveal, celebrate, stop, preview: () => cue(now => note(now, 0.14, 0.16, 'triangle', 659.25)) };
 }

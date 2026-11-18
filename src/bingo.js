@@ -1,12 +1,18 @@
 export const TOTAL = 75;
 export const BALL_COLORS = Object.freeze({ B: '#2585d1', I: '#d14354', N: '#d6a52a', G: '#27a561', O: '#9263cf' });
 export const SCHEMA = 1;
-export const DEFAULT_SETTINGS = Object.freeze({ title: '忘年会ビンゴ', duration: 3400, volume: 0.4, sound: true });
+// Milliseconds. The draw-length setting controls only the machine, so everyone
+// gets the same reading time with the fast setting or reduced motion.
+export const SHOW_TIMING = Object.freeze({
+  machineShort: 1800, machineStandard: 3400, machineLong: 5200, machineReduced: 350,
+  spinFraction: 0.7, columnHold: 1500, quietHold: 500, flash: 160, numberPop: 310,
+});
+export const DEFAULT_SETTINGS = Object.freeze({ title: '忘年会ビンゴ', duration: SHOW_TIMING.machineStandard, volume: 0.4, sound: true });
 
 export function cleanSettings(value = {}) {
   return {
     title: typeof value.title === 'string' ? value.title.trim().slice(0, 36) || DEFAULT_SETTINGS.title : DEFAULT_SETTINGS.title,
-    duration: [1800, 3400, 5200].includes(value.duration) ? value.duration : DEFAULT_SETTINGS.duration,
+    duration: [SHOW_TIMING.machineShort, SHOW_TIMING.machineStandard, SHOW_TIMING.machineLong].includes(value.duration) ? value.duration : DEFAULT_SETTINGS.duration,
     volume: typeof value.volume === 'number' && Number.isFinite(value.volume) ? Math.max(0, Math.min(1, value.volume)) : DEFAULT_SETTINGS.volume,
     sound: typeof value.sound === 'boolean' ? value.sound : DEFAULT_SETTINGS.sound,
   };

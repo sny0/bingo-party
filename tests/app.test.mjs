@@ -125,7 +125,7 @@ test('charge, launch and finale keep one saved draw and block repeated clicks', 
   await app.tick(1600);
   assert.equal(app.stage.classList.contains('is-launching'), true);
   assert.equal(app.elements.get('draw-dialog-heading').textContent, '玉が出ます');
-  await app.tick(300);
+  await app.tick(2200);
   assert.equal(app.stage.classList.contains('is-finale'), true);
   assert.equal(Number(app.elements.get('fallback-number').textContent), app.snapshot().drawn[0]);
   assert.equal(app.elements.get('draw-button').disabled, true, 'finale still owns the draw lock');
@@ -157,16 +157,18 @@ test('reloading mid-show restores the committed number without replay or loss', 
   assert.equal(restored.stage.classList.contains('is-drawing'), false);
   assert.equal(restored.elements.get('draw-dialog').open, false);
   assert.equal(restored.elements.get('draw-button').disabled, false);
-  await first.tick(3500);
+  await first.tick(3800);
   await first.click('skip-effects');
   await completion;
 });
 
-test('reduced motion shows the saved result promptly and leaves it visible', async () => {
+test('reduced motion shortens the machine while preserving the card reading time', async () => {
   const app = mount({ reduced: true });
   const completion = app.click('draw-button');
   await app.tick(400);
   assert.equal(app.elements.get('draw-dialog').open, true);
+  assert.equal(app.stage.getAttribute('data-phase'), 'column');
+  await app.tick(1950);
   assert.equal(Number(app.elements.get('fallback-number').textContent), app.snapshot().drawn[0]);
   await app.click('skip-effects');
   await completion;
@@ -181,7 +183,7 @@ test('the second draw clears the previous number before revealing a new result',
     const completion = app.click('draw-button');
     assert.equal(app.elements.get('fallback-number').textContent, '');
     assert.equal(app.stage.classList.contains('has-machine-3d'), false, 'no WebGL uses the static picture');
-    await app.tick(1900);
+    await app.tick(3800);
     assert.equal(Number(app.elements.get('fallback-number').textContent), app.snapshot().drawn[round]);
     await app.click('skip-effects');
     await completion;
@@ -194,7 +196,7 @@ test('the seventy-fifth result gets its finale and leaves the completed game dis
   game.drawn = Array.from({ length: 74 }, (_, index) => index + 1);
   const app = mount({ saved: new Map([['garagara-bingo-v1', JSON.stringify(game)]]) });
   const completion = app.click('draw-button');
-  await app.tick(1900);
+  await app.tick(3800);
   assert.equal(app.stage.classList.contains('is-finale'), true);
   assert.equal(Number(app.elements.get('fallback-number').textContent), 75);
   await app.click('skip-effects');
@@ -207,11 +209,15 @@ test('the seventy-fifth result gets its finale and leaves the completed game dis
   assert.equal(app.snapshot().drawn.length, 75);
 });
 
-test('skipping during any show phase returns to the board with exactly one result', async () => {
-  for (const elapsed of [0, 1500, 1900]) {
+test('skipping from any phase holds exactly one result until dismissed', async () => {
+  for (const elapsed of [0, 1500, 1900, 3500]) {
     const app = mount();
     const completion = app.click('draw-button');
     await app.tick(elapsed);
+    await app.click('skip-effects');
+    await app.tick(0);
+    assert.equal(app.stage.getAttribute('data-phase'), 'result');
+    assert.equal(app.elements.get('draw-dialog').open, true);
     await app.click('skip-effects');
     await completion;
     assert.equal(app.snapshot().drawn.length, 1);
@@ -222,7 +228,7 @@ test('skipping during any show phase returns to the board with exactly one resul
     assert.equal(app.elements.get('draw-button').disabled, false);
 
     const next = app.click('draw-button');
-    await app.tick(1900);
+    await app.tick(3800);
     assert.equal(app.elements.get('draw-dialog').open, true, 'an old skipped timer cannot close the next draw');
     assert.equal(app.stage.classList.contains('is-finale'), true);
     await app.click('skip-effects');
@@ -236,6 +242,9 @@ test('Escape skips the show without canceling the selected number', async () => 
   const completion = app.click('draw-button');
   let prevented = false;
   await app.dispatch('draw-dialog', 'cancel', { preventDefault() { prevented = true; } });
+  await app.tick(0);
+  assert.equal(app.stage.getAttribute('data-phase'), 'result');
+  await app.click('skip-effects');
   await completion;
   assert.equal(prevented, true);
   assert.equal(app.elements.get('draw-dialog').open, false);
@@ -248,6 +257,11 @@ test('Enter skips an active show and holding the key does not start another draw
   const completion = app.click('draw-button');
   let prevented = false;
   const event = { key: 'Enter', preventDefault() { prevented = true; } };
+  app.keydown(event);
+  await app.tick(0);
+  assert.equal(app.stage.getAttribute('data-phase'), 'result');
+  app.keydown({ ...event, repeat: true });
+  assert.equal(app.elements.get('draw-dialog').open, true);
   app.keydown(event);
   await completion;
   assert.equal(prevented, true);
@@ -293,12 +307,16 @@ test('sound can be toggled inside the modal and both controls stay in sync', asy
   await app.click('draw-sound-button');
   assert.equal(app.snapshot().settings.sound, false);
   await app.click('skip-effects');
+  await app.tick(0);
+  await app.click('skip-effects');
   await completion;
 });
 
 test('a delayed close event from the previous show cannot skip a newly opened dialog', async () => {
   const app = mount();
   const first = app.click('draw-button');
+  await app.click('skip-effects');
+  await app.tick(0);
   await app.click('skip-effects');
   await first;
   const second = app.click('draw-button');
@@ -308,5 +326,47 @@ test('a delayed close event from the previous show cannot skip a newly opened di
   assert.equal(app.stage.classList.contains('is-launching'), true);
   assert.equal(app.snapshot().drawn.length, 2);
   await app.click('skip-effects');
+  await app.tick(0);
+  await app.click('skip-effects');
   await second;
 });
+
+for (const number of [7, 75]) {
+  test('timed reveal, bingo and history for ' + bingo.bingoLetter(number) + ' ' + number, async () => {
+    const saved = bingo.newGame({ duration: 1800, sound: false });
+    saved.drawn = Array.from({ length: 75 }, (_, i) => i + 1).filter(n => n !== number);
+    const app = mount({ saved: new Map([['garagara-bingo-v1', JSON.stringify(saved)]]) });
+    const completion = app.click('draw-button');
+    const letter = app.elements.get('fallback-letter');
+    const digits = app.elements.get('fallback-number');
+    const party = app.elements.get('bingo-dialog');
+    await app.tick(1600);
+    assert.equal(letter.textContent, '');
+    assert.equal(digits.textContent, '');
+    await app.tick(200);
+    assert.equal(letter.textContent, bingo.bingoLetter(number));
+    await app.tick(1499);
+    assert.equal(digits.textContent, '');
+    await app.tick(1);
+    assert.equal(digits.textContent, number === 75 ? '7–' : '');
+    await app.tick(499);
+    await app.click('result-bingo-button');
+    assert.equal(party.open, false);
+    await app.tick(1);
+    assert.equal(Number(digits.textContent), number);
+    const before = app.storage.get('garagara-bingo-v1');
+    for (const fromResult of [true, false]) {
+      app.keydown({ key: 'B', preventDefault() {} });
+      assert.equal(party.open, true);
+      await app.click('draw-button');
+      app.keydown({ key: 'Enter', preventDefault() {} });
+      assert.equal(party.open, false);
+      assert.equal(app.elements.get('draw-dialog').open, fromResult);
+      assert.equal(app.storage.get('garagara-bingo-v1'), before);
+      if (fromResult) {
+        await app.click('skip-effects');
+        await completion;
+      }
+    }
+  });
+}
