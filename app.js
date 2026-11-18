@@ -1,5 +1,5 @@
 import { TOTAL, newGame, decodeGame, chooseNumber, commitDraw, bingoLetter, cleanSettings } from './src/bingo.js';
-import { createShowAudio } from './src/show-audio.js?v=1.3.11';
+import { createShowAudio } from './src/show-audio.js?v=1.4.0';
 
 const STORAGE_KEY = 'garagara-bingo-v1';
 const $ = id => document.getElementById(id);
@@ -423,7 +423,7 @@ readSaved();
 createBoard();
 render();
 if ('WebGL2RenderingContext' in window && !reduceMotion.matches) {
-  import('./src/machine.js?v=1.3.11')
+  import('./src/machine.js?v=1.4.0')
     .then(({ createMachine }) => createMachine(ui.machine_canvas, () => stage.classList.remove('has-machine-3d')))
     .then(loaded => { machine = loaded; })
     .catch(() => { /* The static poster and number readout work without 3D. */ });

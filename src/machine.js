@@ -5,7 +5,7 @@ import { RoomEnvironment } from '../vendor/three/examples/jsm/environments/RoomE
 const DRUM_TURNS = 8;
 const BALL_RADIUS = 0.087;
 const BALL_COLORS = { B: '#2585d1', I: '#d14354', N: '#d6a52a', G: '#27a561', O: '#9263cf' };
-const modelUrl = new URL('../assets/garagara.glb?v=1.3.11', import.meta.url);
+const modelUrl = new URL('../assets/garagara.glb?v=1.4.0', import.meta.url);
 
 function makeNumberSurface() {
   const image = document.createElement('canvas');
