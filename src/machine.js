@@ -4,7 +4,7 @@ import { RoomEnvironment } from '../vendor/three/examples/jsm/environments/RoomE
 
 const DRUM_TURNS = 8;
 const BALL_RADIUS = 0.087;
-const modelUrl = new URL('../assets/garagara.glb?v=1.7.0', import.meta.url);
+const modelUrl = new URL('../assets/garagara.glb?v=1.7.1', import.meta.url);
 
 export async function createMachine(host, onUnavailable) {
   const { scene: model } = await new GLTFLoader().loadAsync(modelUrl.href);

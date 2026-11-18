@@ -8,11 +8,11 @@
   <title>ガラガラ BINGO NIGHT</title>
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=1.7.0">
+  <link rel="stylesheet" href="./styles.css?v=1.7.1">
   <script type="importmap">
     { "imports": { "three": "./vendor/three/build/three.module.min.js" } }
   </script>
-  <script type="module" src="./app.js?v=1.7.0"></script>
+  <script type="module" src="./app.js?v=1.7.1"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -63,8 +63,8 @@
         </div>
         <div class="number-board" id="number-board" aria-label="1から75の抽選済み番号一覧"></div>
         <div class="recent-line">
-          <span class="recent-label">直近の抽選</span>
-          <ol id="recent-numbers" aria-label="直近の抽選結果"><li class="recent-empty">まだ抽選されていません</li></ol>
+          <span class="recent-label">抽選履歴</span>
+          <ol id="recent-numbers" aria-label="抽選履歴（新しい順）" tabindex="0"><li class="recent-empty">まだ抽選されていません</li></ol>
         </div>
         <div class="board-legend">
           <span><i class="legend-dot drawn-dot"></i> 抽選済み</span>
@@ -98,7 +98,7 @@
     <section class="draw-stage" aria-label="ビンゴ抽選機">
       <div class="show-rails" aria-hidden="true"><span></span><span></span></div>
       <div class="machine-view" id="machine-view" aria-hidden="true">
-        <img class="machine-poster" src="./assets/garagara-poster.webp?v=1.7.0" alt="" width="804" height="603">
+        <img class="machine-poster" src="./assets/garagara-poster.webp?v=1.7.1" alt="" width="804" height="603">
         <div class="machine-canvas" id="machine-canvas"></div>
       </div>
       <div class="stage-readout" aria-hidden="true">

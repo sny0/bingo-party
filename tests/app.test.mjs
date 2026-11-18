@@ -208,6 +208,8 @@ test('the seventy-fifth result gets its finale and leaves the completed game dis
   assert.equal(app.document.activeElement, app.elements.get('export-button'));
   await app.click('draw-button');
   assert.equal(app.snapshot().drawn.length, 75);
+  const history = app.elements.get('recent-numbers').children;
+  assert.deepEqual(history.map(item => Number(item.textContent)), [...app.snapshot().drawn].reverse());
 });
 
 test('skipping from any phase holds exactly one result until dismissed', async () => {

@@ -1,5 +1,5 @@
-import { TOTAL, SHOW_TIMING, newGame, decodeGame, chooseNumber, commitDraw, cleanSettings } from './src/bingo.js?v=1.7.0';
-import { createShowAudio } from './src/show-audio.js?v=1.7.0';
+import { TOTAL, SHOW_TIMING, newGame, decodeGame, chooseNumber, commitDraw, cleanSettings } from './src/bingo.js?v=1.7.1';
+import { createShowAudio } from './src/show-audio.js?v=1.7.1';
 
 const STORAGE_KEY = 'garagara-bingo-v1';
 const $ = id => document.getElementById(id);
@@ -7,6 +7,7 @@ const ui = Object.fromEntries(['sound-button','fullscreen-button','settings-butt
 const stage = document.querySelector('.draw-stage');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let game = newGame();
+let displayedHistory;
 let busy = false;
 let drawPending = false;
 let phase = 'idle';
@@ -111,21 +112,29 @@ function render() {
     cell.classList.toggle('is-latest', number === latest);
     cell.setAttribute('aria-label', number + (number === latest ? ' 直前の番号' : drawn.has(number) ? ' 抽選済み' : ' 未抽選'));
   }
-  ui.recent_numbers.replaceChildren();
-  if (!game.drawn.length) {
+  renderHistory(game.drawn);
+  updateSaveStatus();
+}
+
+function renderHistory(numbers) {
+  const historyKey = numbers.join(',');
+  if (historyKey === displayedHistory) return;
+  displayedHistory = historyKey;
+  if (!numbers.length) {
     const empty = document.createElement('li');
     empty.className = 'recent-empty';
     empty.textContent = 'まだ抽選されていません';
-    ui.recent_numbers.append(empty);
+    ui.recent_numbers.replaceChildren(empty);
   } else {
-    [...game.drawn].reverse().slice(0, 7).forEach((number, index) => {
+    const items = [...numbers].reverse().map((number, index) => {
       const item = document.createElement('li');
       item.textContent = number;
-      item.setAttribute('aria-label', index === 0 ? '直前 ' + number + ' 番' : (index + 1) + 'つ前 ' + number + ' 番');
-      ui.recent_numbers.append(item);
+      item.setAttribute('aria-label', '第' + (numbers.length - index) + '球、' + number + '番');
+      return item;
     });
+    ui.recent_numbers.replaceChildren(...items);
   }
-  updateSaveStatus();
+  ui.recent_numbers.scrollLeft = 0;
 }
 
 function launchConfetti(layer = ui.confetti_layer, columns = 8, rows = 7) {
@@ -503,7 +512,7 @@ readSaved();
 createBoard();
 render();
 if ('WebGL2RenderingContext' in window && !reduceMotion.matches) {
-  import('./src/machine.js?v=1.7.0')
+  import('./src/machine.js?v=1.7.1')
     .then(({ createMachine }) => createMachine(ui.machine_canvas, () => stage.classList.remove('has-machine-3d')))
     .then(loaded => { machine = loaded; })
     .catch(() => { /* The static poster and number readout work without 3D. */ });
