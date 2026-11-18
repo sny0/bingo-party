@@ -1,9 +1,9 @@
-import { TOTAL, BALL_COLORS, SHOW_TIMING, newGame, decodeGame, chooseNumber, commitDraw, bingoLetter, cleanSettings } from './src/bingo.js?v=1.6.1';
-import { createShowAudio } from './src/show-audio.js?v=1.6.1';
+import { TOTAL, SHOW_TIMING, newGame, decodeGame, chooseNumber, commitDraw, cleanSettings } from './src/bingo.js?v=1.7.0';
+import { createShowAudio } from './src/show-audio.js?v=1.7.0';
 
 const STORAGE_KEY = 'garagara-bingo-v1';
 const $ = id => document.getElementById(id);
-const ui = Object.fromEntries(['sound-button','fullscreen-button','settings-button','settings-dialog','settings-form','settings-message','title-input','duration-input','volume-input','volume-output','event-title','draw-button','draw-button-text','draw-status','result-kicker','result-ball','ball-letter','ball-number','drawn-count','remaining-count','number-board','recent-numbers','save-status','export-button','import-button','import-input','reset-button','confirm-dialog','confirm-heading','confirm-description','confirm-kicker','confirm-ok','confirm-cancel','toast','machine-canvas','confetti-layer','fallback-letter','fallback-number','skip-label','draw-dialog','draw-dialog-heading','dialog-status','skip-effects','draw-sound-button'].map(id => [id.replaceAll('-', '_'), $(id)]));
+const ui = Object.fromEntries(['sound-button','fullscreen-button','settings-button','settings-dialog','settings-form','settings-message','title-input','duration-input','volume-input','volume-output','event-title','draw-button','draw-button-text','draw-status','result-kicker','result-ball','ball-number','drawn-count','remaining-count','number-board','recent-numbers','save-status','export-button','import-button','import-input','reset-button','confirm-dialog','confirm-heading','confirm-description','confirm-kicker','confirm-ok','confirm-cancel','toast','machine-canvas','confetti-layer','fallback-number','skip-label','draw-dialog','draw-dialog-heading','dialog-status','skip-effects','draw-sound-button'].map(id => [id.replaceAll('-', '_'), $(id)]));
 const stage = document.querySelector('.draw-stage');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let game = newGame();
@@ -62,11 +62,10 @@ function createBoard() {
   for (let group = 0; group < 5; group++) {
     const row = document.createElement('div');
     row.className = 'board-row';
-    const letter = document.createElement('span');
-    letter.className = 'board-letter';
-    letter.textContent = 'BINGO'[group];
-    row.style.setProperty('--band', BALL_COLORS[letter.textContent]);
-    row.append(letter);
+    const range = document.createElement('span');
+    range.className = 'board-range';
+    range.textContent = (group * 15 + 1) + '–' + (group + 1) * 15;
+    row.append(range);
     for (let offset = 1; offset <= 15; offset++) {
       const number = group * 15 + offset;
       const cell = document.createElement('span');
@@ -98,17 +97,14 @@ function render() {
   ui.drawn_count.textContent = game.drawn.length;
   ui.remaining_count.textContent = TOTAL - game.drawn.length;
   ui.ball_number.textContent = latest ?? '?';
-  const letter = bingoLetter(latest);
-  ui.ball_letter.textContent = letter;
   ui.result_ball.classList.toggle('is-waiting', !latest);
-  ui.result_ball.style.setProperty('--band', BALL_COLORS[letter] ?? 'var(--gold)');
   ui.result_kicker.textContent = complete ? '抽選終了' : latest ? '今回の番号' : '抽選スタンバイ';
-  ui.draw_status.textContent = complete ? '75個すべての番号が出ました。' : latest ? '第' + game.drawn.length + '球 · ' + bingoLetter(latest) + 'の' + latest + '番' : 'ボタンを押して抽選を始めてください。';
+  ui.draw_status.textContent = complete ? '75個すべての番号が出ました。' : latest ? '第' + game.drawn.length + '球 · ' + latest + '番' : 'ボタンを押して抽選を始めてください。';
   ui.draw_button_text.textContent = complete ? '抽選は終了しました' : latest ? '次の番号を引く' : 'ガラガラを回す';
   ui.draw_button.disabled = busy || complete;
   ui.settings_button.disabled = busy;
   ui.export_button.disabled = busy || !game.drawn.length;
-  ui.result_ball.setAttribute('aria-label', latest ? '最新の抽選結果 ' + bingoLetter(latest) + 'の' + latest + '番' : '未抽選');
+  ui.result_ball.setAttribute('aria-label', latest ? '最新の抽選結果 ' + latest + '番' : '未抽選');
   for (let number = 1; number <= TOTAL; number++) {
     const cell = $('number-' + number);
     cell.classList.toggle('is-drawn', drawn.has(number));
@@ -133,7 +129,7 @@ function render() {
 }
 
 function launchConfetti(layer = ui.confetti_layer, columns = 8, rows = 7) {
-  const colors = ['#ffd267', '#fff3cc', '#f25378', '#51c8ed', '#58df9f', '#c09aff'];
+  const colors = ['#ff710d', '#ffffff', '#ffad5a', '#be4909', '#fff0db', '#ff852c'];
   const pieces = Array.from({ length: columns * rows }, (_, index) => {
     const piece = document.createElement('span');
     const direction = index % 2 === 0 ? -1 : 1;
@@ -169,7 +165,6 @@ function startMachine(spinDuration) {
   clearShowEffects();
   setPhase('spin');
   ui.skip_label.textContent = '演出をスキップ';
-  ui.fallback_letter.textContent = '';
   ui.fallback_number.textContent = '';
   stage.style.setProperty('--spin-time', spinDuration + 'ms');
   stage.style.setProperty('--flash-time', SHOW_TIMING.flash + 'ms');
@@ -190,27 +185,16 @@ function launchEffects(fallDuration) {
   showAudio.drop(fallDuration);
 }
 
-function showColumn(number) {
+function revealEffects(number) {
   machine?.stop();
   showAudio.stop();
-  const letter = bingoLetter(number);
-  stage.style.setProperty('--column-color', BALL_COLORS[letter]);
-  ui.fallback_letter.textContent = letter;
   stage.classList.remove('is-drawing', 'is-launching');
-  setPhase('column');
-  ui.draw_dialog_heading.textContent = 'カードの列を確認';
-  ui.dialog_status.textContent = letter + 'の列です。';
-}
-
-function revealEffects(number) {
-  const letter = bingoLetter(number);
   setPhase('result');
   stage.classList.add('is-finale');
   render();
   ui.fallback_number.textContent = number;
-  ui.fallback_letter.textContent = letter;
   ui.draw_dialog_heading.textContent = '抽選結果';
-  ui.dialog_status.textContent = letter + 'の' + number + '番が出ました。';
+  ui.dialog_status.textContent = number + '番が出ました。';
   ui.skip_label.textContent = '閉じる';
   showAudio.reveal();
   if (!reduceMotion.matches) {
@@ -274,25 +258,11 @@ async function runDraw() {
       launchEffects(fallDuration);
       await waitForShow(fallDuration);
     }
-    if (!ui.draw_dialog.open) return;
-    showColumn(number);
     if (!skipRequested) {
-      showAudio.column();
-      await waitForShow(SHOW_TIMING.columnHold);
-    }
-    if (!skipRequested && number >= 10) {
-      const tens = Math.floor(number / 10);
-      setPhase('tens');
-      ui.fallback_number.textContent = tens + '–';
-      ui.draw_dialog_heading.textContent = '十の位';
-      ui.dialog_status.textContent = '十の位は' + tens + 'です。';
-      showAudio.tens();
-      await waitForShow(SHOW_TIMING.tensHit);
-    }
-    if (!skipRequested) {
-      setPhase('quiet');
-      showAudio.stop();
-      await waitForShow(SHOW_TIMING.quietHold);
+      setPhase('land');
+      if (stage.classList.contains('has-machine-3d')) machine.land();
+      showAudio.land();
+      await waitForShow(SHOW_TIMING.landingHold);
     }
     if (!ui.draw_dialog.open) return;
     skipRequested = false;
@@ -533,7 +503,7 @@ readSaved();
 createBoard();
 render();
 if ('WebGL2RenderingContext' in window && !reduceMotion.matches) {
-  import('./src/machine.js?v=1.6.1')
+  import('./src/machine.js?v=1.7.0')
     .then(({ createMachine }) => createMachine(ui.machine_canvas, () => stage.classList.remove('has-machine-3d')))
     .then(loaded => { machine = loaded; })
     .catch(() => { /* The static poster and number readout work without 3D. */ });

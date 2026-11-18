@@ -1,11 +1,9 @@
 export const TOTAL = 75;
-export const BALL_COLORS = Object.freeze({ B: '#2585d1', I: '#d14354', N: '#d6a52a', G: '#27a561', O: '#9263cf' });
 export const SCHEMA = 1;
-// Milliseconds. The draw-length setting controls only the machine, so everyone
-// gets the same reading time with the fast setting or reduced motion.
+// Milliseconds. Hold the unmarked ball briefly before revealing the whole number.
 export const SHOW_TIMING = Object.freeze({
   machineShort: 1800, machineStandard: 3400, machineLong: 5200, machineReduced: 350,
-  spinFraction: 0.7, columnHold: 1500, tensHit: 120, quietHold: 500, flash: 160, numberPop: 310,
+  spinFraction: 0.7, landingHold: 600, flash: 160, numberPop: 310,
 });
 export const DEFAULT_SETTINGS = Object.freeze({ title: '忘年会ビンゴ', duration: SHOW_TIMING.machineStandard, volume: 0.4, sound: true });
 

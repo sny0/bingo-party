@@ -55,13 +55,13 @@ def wood_material():
 
 
 wood = wood_material()
-red_lacquer = material('Satin red lacquer', (.235, .015, .028), .37)
-dark_lacquer = material('Red lacquer edge', (.16, .011, .021), .42)
+orange_lacquer = material('Tangerine enamel', (.88, .16, .012), .33)
+dark_lacquer = material('Burnt orange edge', (.49, .07, .006), .42)
 steel = material('Brushed steel fittings', (.61, .63, .65), .26, .83)
 dark = material('Chute interior', (.032, .023, .016), .52)
-tray_white = material('Off-white tray', (.85, .83, .75), .35)
-felt = material('Wine red felt', (.16, .012, .023), .89)
-arrow_ivory = material('Ivory rotation arrow', (.85, .63, .37), .60)
+tray_white = material('Porcelain white tray', (.96, .95, .93), .35)
+felt = material('Orange felt', (.40, .071, .012), .89)
+arrow_ivory = material('White rotation arrow', (.99, .97, .94), .60)
 
 
 def finish(obj, name, mat, bevel=0, smooth=False):
@@ -157,15 +157,15 @@ for i in range(3):
 drum = empty('Drum', drum_center)
 crank = empty('Crank', drum_center)
 for part in (
-    octagon('Shallow octagonal drum', 1.073, .25, -.288, red_lacquer, .023),
+    octagon('Shallow octagonal drum', 1.073, .25, -.288, orange_lacquer, .023),
     octagon('Front ply edge', 1.076, -.247, -.302, dark_lacquer, .008),
-    octagon('Lacquered front face', 1.062, -.291, -.337, red_lacquer, .016),
+    octagon('Lacquered front face', 1.062, -.291, -.337, orange_lacquer, .016),
     octagon('Rear ply edge', 1.072, .258, .206, dark_lacquer, .009),
 ):
     attach(part, drum)
 
 top = 1.56+1.073*cos(pi/8)
-attach(block('Refill hatch', (.64,.32,.023), (0,-.04,top+.008), red_lacquer, .008), drum)
+attach(block('Refill hatch', (.64,.32,.023), (0,-.04,top+.008), orange_lacquer, .008), drum)
 for x in (-.23,.23):
     for y in (-.145,.064):
         attach(cylinder('Refill screw', (x,y,top+.019), (x,y,top+.028), .022, steel, .005, 20), drum)

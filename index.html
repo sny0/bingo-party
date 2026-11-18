@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#160f15">
+  <meta name="theme-color" content="#fffaf5">
   <meta name="description" content="1〜75の番号を重複なしで引けるビンゴ抽選機。抽選履歴を保存して、途中から再開できます。">
   <title>ガラガラ BINGO NIGHT</title>
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=1.6.1">
+  <link rel="stylesheet" href="./styles.css?v=1.7.0">
   <script type="importmap">
     { "imports": { "three": "./vendor/three/build/three.module.min.js" } }
   </script>
-  <script type="module" src="./app.js?v=1.6.1"></script>
+  <script type="module" src="./app.js?v=1.7.0"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -43,7 +43,6 @@
         <p class="result-kicker" id="result-kicker">今回の番号</p>
         <div class="number-orbit">
           <div class="result-ball" id="result-ball">
-            <span class="ball-letter" id="ball-letter">BINGO</span>
             <span class="ball-number" id="ball-number">?</span>
           </div>
         </div>
@@ -99,11 +98,10 @@
     <section class="draw-stage" aria-label="ビンゴ抽選機">
       <div class="show-rails" aria-hidden="true"><span></span><span></span></div>
       <div class="machine-view" id="machine-view" aria-hidden="true">
-        <img class="machine-poster" src="./assets/garagara-poster.webp?v=1.6.1" alt="" width="804" height="603">
+        <img class="machine-poster" src="./assets/garagara-poster.webp?v=1.7.0" alt="" width="804" height="603">
         <div class="machine-canvas" id="machine-canvas"></div>
       </div>
       <div class="stage-readout" aria-hidden="true">
-        <span class="stage-letter" id="fallback-letter"></span>
         <strong class="stage-number" id="fallback-number"></strong>
       </div>
     </section>

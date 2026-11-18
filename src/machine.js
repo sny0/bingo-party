@@ -4,7 +4,7 @@ import { RoomEnvironment } from '../vendor/three/examples/jsm/environments/RoomE
 
 const DRUM_TURNS = 8;
 const BALL_RADIUS = 0.087;
-const modelUrl = new URL('../assets/garagara.glb?v=1.6.1', import.meta.url);
+const modelUrl = new URL('../assets/garagara.glb?v=1.7.0', import.meta.url);
 
 export async function createMachine(host, onUnavailable) {
   const { scene: model } = await new GLTFLoader().loadAsync(modelUrl.href);
@@ -35,7 +35,7 @@ export async function createMachine(host, onUnavailable) {
   });
   scene.add(model);
 
-  const key = new THREE.DirectionalLight(0xffead4, 2.7);
+  const key = new THREE.DirectionalLight(0xfff6eb, 2.7);
   key.position.set(-3.2, 6.7, 4.4);
   key.castShadow = true;
   key.shadow.mapSize.set(1024, 1024);
@@ -46,14 +46,14 @@ export async function createMachine(host, onUnavailable) {
   key.shadow.radius = 3;
   const rim = new THREE.DirectionalLight(0xffb895, 1.15);
   rim.position.set(1.6, 4.4, -3);
-  scene.add(key, rim, new THREE.HemisphereLight(0xe7e3ff, 0x896168, 0.54));
+  scene.add(key, rim, new THREE.HemisphereLight(0xfff9f1, 0x9d7f67, 0.54));
 
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: 0.11 }));
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   scene.add(floor);
 
-  const ballMaterial = new THREE.MeshStandardMaterial({ color: 0xf7ecd6, roughness: 0.34 });
+  const ballMaterial = new THREE.MeshStandardMaterial({ color: 0xfffbf5, roughness: 0.34 });
   const ball = new THREE.Mesh(new THREE.SphereGeometry(BALL_RADIUS, 40, 30), ballMaterial);
   ball.castShadow = true;
   scene.add(ball);
@@ -155,6 +155,10 @@ export async function createMachine(host, onUnavailable) {
       if (!ready) return;
       drawFrame(1, 0);
       animate(duration, progress => drawFrame(1, progress));
+    },
+    land() {
+      stop();
+      if (ready) drawFrame(1, 1);
     },
     stop,
   };

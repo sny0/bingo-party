@@ -7,8 +7,7 @@ import { createShowAudio } from '../src/show-audio.js';
 
 const source = (await readFile(new URL('../app.js', import.meta.url), 'utf8')).replace(/^import[^\n]*\n/gm, '');
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
-const { machineShort, machineReduced, columnHold, tensHit, quietHold } = bingo.SHOW_TIMING;
-const twoDigitReveal = columnHold + tensHit + quietHold;
+const { machineShort, machineReduced, landingHold } = bingo.SHOW_TIMING;
 
 // Exercise real app events and the persisted game with a deterministic clock.
 // This harness checks state transitions; it does not emulate CSS or browser layout.
@@ -127,7 +126,7 @@ test('charge, launch and finale keep one saved draw and block repeated clicks', 
   await app.tick(1600);
   assert.equal(app.stage.classList.contains('is-launching'), true);
   assert.equal(app.elements.get('draw-dialog-heading').textContent, '玉が出ます');
-  await app.tick(machineShort + twoDigitReveal - 1600);
+  await app.tick(machineShort + landingHold - 1600);
   assert.equal(app.stage.classList.contains('is-finale'), true);
   assert.equal(Number(app.elements.get('fallback-number').textContent), app.snapshot().drawn[0]);
   assert.equal(app.elements.get('draw-button').disabled, true, 'finale still owns the draw lock');
@@ -159,18 +158,18 @@ test('reloading mid-show restores the committed number without replay or loss', 
   assert.equal(restored.stage.classList.contains('is-drawing'), false);
   assert.equal(restored.elements.get('draw-dialog').open, false);
   assert.equal(restored.elements.get('draw-button').disabled, false);
-  await first.tick(machineShort + twoDigitReveal);
+  await first.tick(machineShort + landingHold);
   await first.click('skip-effects');
   await completion;
 });
 
-test('reduced motion shortens the machine while preserving the card reading time', async () => {
+test('reduced motion shortens the machine and holds the result until dismissed', async () => {
   const app = mount({ reduced: true });
   const completion = app.click('draw-button');
   await app.tick(400);
   assert.equal(app.elements.get('draw-dialog').open, true);
-  assert.equal(app.stage.getAttribute('data-phase'), 'column');
-  await app.tick(machineReduced + twoDigitReveal - 400);
+  assert.equal(app.stage.getAttribute('data-phase'), 'land');
+  await app.tick(machineReduced + landingHold - 400);
   assert.equal(Number(app.elements.get('fallback-number').textContent), app.snapshot().drawn[0]);
   await app.click('skip-effects');
   await completion;
@@ -185,7 +184,7 @@ test('the second draw clears the previous number before revealing a new result',
     const completion = app.click('draw-button');
     assert.equal(app.elements.get('fallback-number').textContent, '');
     assert.equal(app.stage.classList.contains('has-machine-3d'), false, 'no WebGL uses the static picture');
-    await app.tick(machineShort + twoDigitReveal);
+    await app.tick(machineShort + landingHold);
     assert.equal(Number(app.elements.get('fallback-number').textContent), app.snapshot().drawn[round]);
     await app.click('skip-effects');
     await completion;
@@ -198,7 +197,7 @@ test('the seventy-fifth result gets its finale and leaves the completed game dis
   game.drawn = Array.from({ length: 74 }, (_, index) => index + 1);
   const app = mount({ saved: new Map([['garagara-bingo-v1', JSON.stringify(game)]]) });
   const completion = app.click('draw-button');
-  await app.tick(machineShort + twoDigitReveal);
+  await app.tick(machineShort + landingHold);
   assert.equal(app.stage.classList.contains('is-finale'), true);
   assert.equal(Number(app.elements.get('fallback-number').textContent), 75);
   await app.click('skip-effects');
@@ -212,7 +211,7 @@ test('the seventy-fifth result gets its finale and leaves the completed game dis
 });
 
 test('skipping from any phase holds exactly one result until dismissed', async () => {
-  for (const elapsed of [0, 1500, 1900, 3340, 3500]) {
+  for (const elapsed of [0, 1500, machineShort + landingHold - 1]) {
     const app = mount();
     const completion = app.click('draw-button');
     await app.tick(elapsed);
@@ -230,7 +229,7 @@ test('skipping from any phase holds exactly one result until dismissed', async (
     assert.equal(app.elements.get('draw-button').disabled, false);
 
     const next = app.click('draw-button');
-    await app.tick(machineShort + twoDigitReveal);
+    await app.tick(machineShort + landingHold);
     assert.equal(app.elements.get('draw-dialog').open, true, 'an old skipped timer cannot close the next draw');
     assert.equal(app.stage.classList.contains('is-finale'), true);
     await app.click('skip-effects');
@@ -334,33 +333,25 @@ test('a delayed close event from the previous show cannot skip a newly opened di
 });
 
 for (const number of [7, 75]) {
-  test('timed reveal, bingo and history for ' + bingo.bingoLetter(number) + ' ' + number, async () => {
+  test('the whole number appears once, stays on screen and survives bingo: ' + number, async () => {
     const saved = bingo.newGame({ duration: 1800, sound: false });
     saved.drawn = Array.from({ length: 75 }, (_, i) => i + 1).filter(n => n !== number);
     const app = mount({ saved: new Map([['garagara-bingo-v1', JSON.stringify(saved)]]) });
     const completion = app.click('draw-button');
-    const letter = app.elements.get('fallback-letter');
     const digits = app.elements.get('fallback-number');
     const party = app.elements.get('bingo-dialog');
     await app.tick(1600);
-    assert.equal(letter.textContent, '');
     assert.equal(digits.textContent, '');
     await app.tick(200);
-    assert.equal(letter.textContent, bingo.bingoLetter(number));
-    await app.tick(1499);
+    assert.equal(app.stage.getAttribute('data-phase'), 'land');
+    await app.tick(landingHold - 1);
     assert.equal(digits.textContent, '');
-    await app.tick(1);
-    assert.equal(digits.textContent, number === 75 ? '7–' : '');
-    if (number === 75) {
-      assert.equal(app.stage.getAttribute('data-phase'), 'tens');
-      await app.tick(tensHit);
-    }
-    assert.equal(app.stage.getAttribute('data-phase'), 'quiet');
-    await app.tick(499);
     await app.click('result-bingo-button');
     assert.equal(party.open, false);
     await app.tick(1);
     assert.equal(Number(digits.textContent), number);
+    assert.equal(app.elements.get('dialog-status').textContent, number + '番が出ました。');
+    assert.equal(app.elements.get('result-ball').getAttribute('aria-label'), '最新の抽選結果 ' + number + '番');
     const before = app.storage.get('garagara-bingo-v1');
     for (const fromResult of [true, false]) {
       app.keydown({ key: 'B', preventDefault() {} });
