@@ -1,5 +1,5 @@
-import { TOTAL, BALL_COLORS, SHOW_TIMING, newGame, decodeGame, chooseNumber, commitDraw, bingoLetter, cleanSettings } from './src/bingo.js?v=1.6.0';
-import { createShowAudio } from './src/show-audio.js?v=1.6.0';
+import { TOTAL, BALL_COLORS, SHOW_TIMING, newGame, decodeGame, chooseNumber, commitDraw, bingoLetter, cleanSettings } from './src/bingo.js?v=1.6.1';
+import { createShowAudio } from './src/show-audio.js?v=1.6.1';
 
 const STORAGE_KEY = 'garagara-bingo-v1';
 const $ = id => document.getElementById(id);
@@ -187,7 +187,7 @@ function launchEffects(fallDuration) {
   stage.classList.add('is-launching');
   ui.draw_dialog_heading.textContent = '玉が出ます';
   ui.dialog_status.textContent = '玉が出ます。';
-  if (!reduceMotion.matches) showAudio.drop(fallDuration);
+  showAudio.drop(fallDuration);
 }
 
 function showColumn(number) {
@@ -276,15 +276,22 @@ async function runDraw() {
     }
     if (!ui.draw_dialog.open) return;
     showColumn(number);
-    if (!skipRequested) await waitForShow(SHOW_TIMING.columnHold);
+    if (!skipRequested) {
+      showAudio.column();
+      await waitForShow(SHOW_TIMING.columnHold);
+    }
+    if (!skipRequested && number >= 10) {
+      const tens = Math.floor(number / 10);
+      setPhase('tens');
+      ui.fallback_number.textContent = tens + '–';
+      ui.draw_dialog_heading.textContent = '十の位';
+      ui.dialog_status.textContent = '十の位は' + tens + 'です。';
+      showAudio.tens();
+      await waitForShow(SHOW_TIMING.tensHit);
+    }
     if (!skipRequested) {
       setPhase('quiet');
-      if (number >= 10) {
-        const tens = Math.floor(number / 10);
-        ui.fallback_number.textContent = tens + '–';
-        ui.draw_dialog_heading.textContent = '十の位';
-        ui.dialog_status.textContent = '十の位は' + tens + 'です。';
-      }
+      showAudio.stop();
       await waitForShow(SHOW_TIMING.quietHold);
     }
     if (!ui.draw_dialog.open) return;
@@ -526,7 +533,7 @@ readSaved();
 createBoard();
 render();
 if ('WebGL2RenderingContext' in window && !reduceMotion.matches) {
-  import('./src/machine.js?v=1.6.0')
+  import('./src/machine.js?v=1.6.1')
     .then(({ createMachine }) => createMachine(ui.machine_canvas, () => stage.classList.remove('has-machine-3d')))
     .then(loaded => { machine = loaded; })
     .catch(() => { /* The static poster and number readout work without 3D. */ });

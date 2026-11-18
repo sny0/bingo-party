@@ -121,19 +121,36 @@ export function createShowAudio(AudioContext) {
     cue(now => {
       const length = milliseconds / 1000;
       const swoosh = length - 0.16;
-      burst(now, 0.09, 0.38, 3200, 1400);
-      note(now, 0.155, 0.25, 'triangle', 390, { to: 98, cutoff: 1700 });
+      // A short mechanical pop as the ball leaves the drum.
+      burst(now, 0.045, 0.48, 2700, 1250);
+      note(now, 0.085, 0.32, 'triangle', 520, { to: 140, cutoff: 2200 });
+      if (swoosh < 0.12) return;
       burst(now + 0.03, swoosh, 0.25, 1000, 5500, { attack: swoosh * 0.16, type: 'highpass' });
       note(now + 0.055, swoosh - 0.04, 0.18, 'sine', 470, { to: 1920, attack: 0.025 });
-      // The tail ends at least 100 ms ahead of the reveal, including on Fast.
     });
+  }
+
+  // Two close reflections give each visual beat the snap of a handclap.
+  function clap(now, pitch, level) {
+    burst(now, 0.020, level, 2400, 1600);
+    burst(now + 0.009, 0.023, level * 0.85, 1950, 1250);
+    burst(now + 0.019, 0.074, level * 0.78, 2600, 1050);
+    note(now, 0.078, level * 0.45, 'triangle', pitch, { to: pitch * 0.52, cutoff: 2700 });
+  }
+
+  function column() {
+    cue(now => clap(now, 350, 0.84));
+  }
+
+  function tens() {
+    cue(now => clap(now, 455, 0.91));
   }
 
   function reveal() {
     cue(now => {
+      clap(now, 390, 1.0);
       note(now, 0.34, 0.58, 'triangle', 175, { to: 62, cutoff: 1900, endCutoff: 370 });
       note(now, 0.26, 0.22, 'brass', 196, { cutoff: 1400, endCutoff: 330 });
-      burst(now, 0.075, 0.29, 2100, 900);
     });
   }
 
@@ -168,5 +185,5 @@ export function createShowAudio(AudioContext) {
     active.clear();
   }
 
-  return { prepare, update, spin, drop, reveal, celebrate, stop, preview: () => cue(now => note(now, 0.14, 0.16, 'triangle', 659.25)) };
+  return { prepare, update, spin, drop, column, tens, reveal, celebrate, stop, preview: () => cue(now => note(now, 0.14, 0.16, 'triangle', 659.25)) };
 }

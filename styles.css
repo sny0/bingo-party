@@ -240,7 +240,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   width: 111%;
   height: 111%;
   border-radius: 0;
-  background: url('./assets/garagara-poster.webp?v=1.6.0') center / 133% auto no-repeat;
+  background: url('./assets/garagara-poster.webp?v=1.6.1') center / 133% auto no-repeat;
   box-shadow: none;
   filter: drop-shadow(0 9px 6px #140810a1);
 }
@@ -615,8 +615,8 @@ body.showing-draw { overflow:hidden; }
   font-variant-numeric: tabular-nums;
   line-height: .94;
 }
-.draw-stage:is([data-phase="column"], [data-phase="quiet"], [data-phase="result"]) .stage-readout { display: flex; }
-.draw-stage:is([data-phase="column"], [data-phase="quiet"], [data-phase="result"]) .machine-view { visibility: hidden; }
+.draw-stage:is([data-phase="column"], [data-phase="tens"], [data-phase="quiet"], [data-phase="result"]) .stage-readout { display: flex; }
+.draw-stage:is([data-phase="column"], [data-phase="tens"], [data-phase="quiet"], [data-phase="result"]) .machine-view { visibility: hidden; }
 .stage-letter {
   --diameter: min(74cqw, 75cqh);
   display: grid;

@@ -5,7 +5,7 @@ export const SCHEMA = 1;
 // gets the same reading time with the fast setting or reduced motion.
 export const SHOW_TIMING = Object.freeze({
   machineShort: 1800, machineStandard: 3400, machineLong: 5200, machineReduced: 350,
-  spinFraction: 0.7, columnHold: 1500, quietHold: 500, flash: 160, numberPop: 310,
+  spinFraction: 0.7, columnHold: 1500, tensHit: 120, quietHold: 500, flash: 160, numberPop: 310,
 });
 export const DEFAULT_SETTINGS = Object.freeze({ title: '忘年会ビンゴ', duration: SHOW_TIMING.machineStandard, volume: 0.4, sound: true });
 

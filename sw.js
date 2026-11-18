@@ -1,8 +1,8 @@
-const CACHE = 'garagara-bingo-v1.6.0';
+const CACHE = 'garagara-bingo-v1.6.1';
 const ASSETS = [
-  './', './index.html', './styles.css?v=1.6.0', './app.js?v=1.6.0', './src/bingo.js?v=1.6.0', './src/machine.js?v=1.6.0',
-  './src/show-audio.js?v=1.6.0',
-  './icon.svg', './manifest.webmanifest', './assets/garagara.glb?v=1.6.0', './assets/garagara-poster.webp?v=1.6.0',
+  './', './index.html', './styles.css?v=1.6.1', './app.js?v=1.6.1', './src/bingo.js?v=1.6.1', './src/machine.js?v=1.6.1',
+  './src/show-audio.js?v=1.6.1',
+  './icon.svg', './manifest.webmanifest', './assets/garagara.glb?v=1.6.1', './assets/garagara-poster.webp?v=1.6.1',
   './vendor/three/LICENSE', './vendor/three/build/three.module.min.js', './vendor/three/build/three.core.min.js',
   './vendor/three/examples/jsm/environments/RoomEnvironment.js',
   './vendor/three/examples/jsm/loaders/GLTFLoader.js',
