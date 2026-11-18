@@ -1,4 +1,5 @@
 export const TOTAL = 75;
+export const BALL_COLORS = Object.freeze({ B: '#2585d1', I: '#d14354', N: '#d6a52a', G: '#27a561', O: '#9263cf' });
 export const SCHEMA = 1;
 export const DEFAULT_SETTINGS = Object.freeze({ title: '忘年会ビンゴ', duration: 3400, volume: 0.4, sound: true });
 

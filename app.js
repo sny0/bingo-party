@@ -1,5 +1,5 @@
-import { TOTAL, newGame, decodeGame, chooseNumber, commitDraw, bingoLetter, cleanSettings } from './src/bingo.js';
-import { createShowAudio } from './src/show-audio.js?v=1.4.0';
+import { TOTAL, BALL_COLORS, newGame, decodeGame, chooseNumber, commitDraw, bingoLetter, cleanSettings } from './src/bingo.js?v=1.5.0';
+import { createShowAudio } from './src/show-audio.js?v=1.5.0';
 
 const STORAGE_KEY = 'garagara-bingo-v1';
 const $ = id => document.getElementById(id);
@@ -63,6 +63,7 @@ function createBoard() {
     const letter = document.createElement('span');
     letter.className = 'board-letter';
     letter.textContent = 'BINGO'[group];
+    row.style.setProperty('--band', BALL_COLORS[letter.textContent]);
     row.append(letter);
     for (let offset = 1; offset <= 15; offset++) {
       const number = group * 15 + offset;
@@ -95,8 +96,11 @@ function render() {
   ui.drawn_count.textContent = game.drawn.length;
   ui.remaining_count.textContent = TOTAL - game.drawn.length;
   ui.ball_number.textContent = latest ?? '?';
-  ui.ball_letter.textContent = bingoLetter(latest);
-  ui.result_kicker.textContent = complete ? '抽選終了' : '今回の番号';
+  const letter = bingoLetter(latest);
+  ui.ball_letter.textContent = letter;
+  ui.result_ball.classList.toggle('is-waiting', !latest);
+  ui.result_ball.style.setProperty('--band', BALL_COLORS[letter] ?? 'var(--gold)');
+  ui.result_kicker.textContent = complete ? '抽選終了' : latest ? '今回の番号' : '抽選スタンバイ';
   ui.draw_status.textContent = complete ? '75個すべての番号が出ました。' : latest ? '第' + game.drawn.length + '球 · ' + bingoLetter(latest) + 'の' + latest + '番' : 'ボタンを押して抽選を始めてください。';
   ui.draw_button_text.textContent = complete ? '抽選は終了しました' : latest ? '次の番号を引く' : 'ガラガラを回す';
   ui.draw_button.disabled = busy || complete;
@@ -423,7 +427,7 @@ readSaved();
 createBoard();
 render();
 if ('WebGL2RenderingContext' in window && !reduceMotion.matches) {
-  import('./src/machine.js?v=1.4.0')
+  import('./src/machine.js?v=1.5.0')
     .then(({ createMachine }) => createMachine(ui.machine_canvas, () => stage.classList.remove('has-machine-3d')))
     .then(loaded => { machine = loaded; })
     .catch(() => { /* The static poster and number readout work without 3D. */ });

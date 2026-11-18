@@ -1,11 +1,11 @@
 import * as THREE from 'three';
+import { BALL_COLORS } from './bingo.js?v=1.5.0';
 import { GLTFLoader } from '../vendor/three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from '../vendor/three/examples/jsm/environments/RoomEnvironment.js';
 
 const DRUM_TURNS = 8;
 const BALL_RADIUS = 0.087;
-const BALL_COLORS = { B: '#2585d1', I: '#d14354', N: '#d6a52a', G: '#27a561', O: '#9263cf' };
-const modelUrl = new URL('../assets/garagara.glb?v=1.4.0', import.meta.url);
+const modelUrl = new URL('../assets/garagara.glb?v=1.5.0', import.meta.url);
 
 function makeNumberSurface() {
   const image = document.createElement('canvas');
